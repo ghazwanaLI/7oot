@@ -1,0 +1,2298 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة المحطة</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f7f0;--bg2:#e4f0e4;
+  --card:#fff;--border:#c8e0c8;--border2:#a0c8a0;
+  --p1:#1a5c2e;--p2:#2d8a4e;--p1d:rgba(26,92,46,.08);
+  --a2:#dc2626;--a2d:rgba(220,38,38,.08);
+  --a3:#16a34a;--a3d:rgba(22,163,74,.08);
+  --warn:#d97706;--warnd:rgba(217,119,6,.08);
+  --text:#0f2d1a;--t2:#2d5a3d;--t3:#6b9e7a;
+  --r:14px;--sh:0 4px 20px rgba(26,92,46,.1);
+  /* products */
+  --premium:#ef4444;--regular:#f97316;--gasoil:#6366f1;--kerosene:#10b981;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+
+/* LOGIN */
+#login-screen{display:flex;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#0d3b1e 0%,#1a5c2e 50%,#0f2d18 100%);}
+.lbox{width:420px;max-width:95vw;background:#fff;border-radius:24px;padding:44px 40px;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);animation:up .5s cubic-bezier(.34,1.56,.64,1);}
+.licon{width:72px;height:72px;margin:0 auto 16px;background:linear-gradient(135deg,#1a5c2e,#2d8a4e);
+  border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;
+  box-shadow:0 8px 24px rgba(26,92,46,.35);}
+.ltitle{text-align:center;font-size:22px;font-weight:800;color:var(--p1);margin-bottom:4px;}
+.lsub{text-align:center;font-size:12px;color:var(--t3);margin-bottom:28px;}
+.lerr{background:var(--a2d);border:1px solid rgba(220,38,38,.3);border-radius:10px;
+  padding:10px 14px;font-size:13px;color:var(--a2);margin-bottom:12px;display:none;}
+.lf{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.ll{font-size:11px;color:var(--t2);font-weight:700;}
+.li{background:#f7fbf8;border:1.5px solid var(--border);border-radius:10px;
+  padding:11px 14px;color:var(--text);font-family:'Cairo',sans-serif;font-size:14px;
+  outline:none;transition:all .2s;width:100%;}
+.li:focus{border-color:var(--p1);background:#fff;box-shadow:0 0 0 3px var(--p1d);}
+.lbtn{width:100%;padding:13px;background:linear-gradient(135deg,#1a5c2e,#2d8a4e);
+  color:#fff;border:none;border-radius:10px;font-family:'Cairo',sans-serif;
+  font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;margin-top:4px;}
+.lbtn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(26,92,46,.35);}
+@keyframes up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+
+/* HEADER */
+#app{display:none;}
+.header{background:linear-gradient(135deg,#1a5c2e,#2d8a4e);padding:0;position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 16px rgba(26,92,46,.3);}
+.header-top{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;
+  border-bottom:1px solid rgba(255,255,255,.1);}
+.h-brand{display:flex;align-items:center;gap:10px;}
+.h-ico{width:40px;height:40px;background:rgba(255,255,255,.15);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;font-size:22px;}
+.h-name{font-size:16px;font-weight:800;color:#fff;}
+.h-sub{font-size:10px;color:rgba(255,255,255,.6);}
+.h-right{display:flex;align-items:center;gap:10px;}
+.h-date{font-size:13px;color:rgba(255,255,255,.8);font-weight:600;}
+.h-user{font-size:12px;color:rgba(255,255,255,.7);}
+.h-btn{padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.3);
+  background:transparent;color:rgba(255,255,255,.8);font-family:'Cairo',sans-serif;
+  font-size:12px;cursor:pointer;transition:all .2s;}
+.h-btn:hover{background:rgba(255,255,255,.15);color:#fff;}
+
+/* NAV TABS */
+.nav-tabs{display:flex;padding:0 16px;overflow-x:auto;scrollbar-width:none;}
+.nav-tabs::-webkit-scrollbar{display:none;}
+.ntab{padding:10px 18px;cursor:pointer;color:rgba(255,255,255,.6);font-size:13px;font-weight:600;
+  white-space:nowrap;border-bottom:3px solid transparent;transition:all .18s;}
+.ntab:hover{color:#fff;background:rgba(255,255,255,.06);}
+.ntab.active{color:#fff;border-bottom:3px solid #86efac;font-weight:700;}
+
+/* MAIN */
+.content{padding:20px 24px;max-width:1400px;margin:0 auto;}
+
+/* BUTTONS */
+.btn{padding:9px 18px;border-radius:10px;border:none;cursor:pointer;font-family:'Cairo',sans-serif;
+  font-size:13px;font-weight:600;transition:all .18s;display:inline-flex;align-items:center;gap:6px;}
+.btn-p{background:linear-gradient(135deg,#1a5c2e,#2d8a4e);color:#fff;}
+.btn-p:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(26,92,46,.35);}
+.btn-o{background:transparent;color:var(--t2);border:1.5px solid var(--border2);}
+.btn-o:hover{border-color:var(--p1);color:var(--p1);background:var(--p1d);}
+.btn-r{background:transparent;color:var(--a2);border:1.5px solid rgba(220,38,38,.3);}
+.btn-r:hover{background:var(--a2d);}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:8px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* SECTION */
+.section{background:#fff;border:1px solid var(--border);border-radius:var(--r);
+  overflow:hidden;margin-bottom:18px;box-shadow:0 2px 10px rgba(26,92,46,.06);}
+.sec-hdr{padding:14px 20px;border-bottom:2px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:linear-gradient(135deg,#f0f7f0,#fff);}
+.sec-title{font-size:14px;font-weight:700;color:var(--p1);display:flex;align-items:center;gap:8px;}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--p1);box-shadow:0 0 8px var(--p1d);}
+
+/* FORM */
+.fi{background:#f7fbf8;border:1.5px solid var(--border);border-radius:10px;
+  padding:10px 13px;color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;
+  outline:none;transition:all .2s;width:100%;}
+.fi:focus{border-color:var(--p1);background:#fff;box-shadow:0 0 0 3px var(--p1d);}
+.fi:read-only{background:#f0f7f0;color:var(--p1);font-weight:700;}
+.fl{font-size:11px;color:var(--t2);font-weight:700;margin-bottom:4px;display:block;}
+
+/* PRODUCT COLORS */
+.prod-premium{color:var(--premium);border-color:var(--premium);}
+.prod-regular{color:var(--regular);border-color:var(--regular);}
+.prod-gasoil{color:var(--gasoil);border-color:var(--gasoil);}
+.prod-kerosene{color:var(--kerosene);border-color:var(--kerosene);}
+.prod-badge{display:inline-flex;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1.5px solid;}
+
+/* PUMP CARD */
+.pump-card{background:#fff;border:1.5px solid var(--border);border-radius:14px;
+  padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(26,92,46,.06);
+  transition:box-shadow .2s;}
+.pump-card:hover{box-shadow:0 4px 16px rgba(26,92,46,.12);}
+.pump-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.pump-name{font-size:15px;font-weight:800;color:var(--p1);}
+.pump-total{font-size:18px;font-weight:900;color:var(--p1);}
+.meter-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;}
+.meter-box{display:flex;flex-direction:column;gap:5px;}
+
+/* SUMMARY CARDS */
+.sum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.sum-card{background:#fff;border:1px solid var(--border);border-radius:14px;
+  padding:16px;text-align:center;border-top:4px solid var(--p1);}
+.sum-val{font-size:28px;font-weight:900;margin:6px 0;}
+.sum-lbl{font-size:11px;color:var(--t3);font-weight:600;}
+.sum-sub{font-size:12px;color:var(--t2);margin-top:4px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:#fff;border:1.5px solid var(--border);border-radius:12px;
+  padding:11px 20px;font-size:13px;font-weight:600;z-index:9999;
+  opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;box-shadow:var(--sh);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+.toast.ok{border-color:rgba(22,163,74,.4);color:var(--a3);}
+.toast.err{border-color:rgba(220,38,38,.4);color:var(--a2);}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+thead tr{background:linear-gradient(135deg,#1a5c2e,#2d8a4e);}
+th{padding:10px 13px;text-align:right;color:#fff;font-weight:700;font-size:11px;white-space:nowrap;}
+td{padding:9px 13px;border-bottom:1px solid rgba(26,92,46,.06);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(26,92,46,.03);}
+
+/* BADGE */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.b-ok{background:var(--a3d);color:var(--a3);border:1px solid rgba(22,163,74,.2);}
+.b-warn{background:var(--warnd);color:var(--warn);border:1px solid rgba(217,119,6,.2);}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(15,45,26,.6);
+  backdrop-filter:blur(6px);z-index:300;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:#fff;border:1.5px solid var(--border);border-radius:20px;padding:26px;
+  width:560px;max-width:96vw;max-height:92vh;overflow-y:auto;
+  animation:up .25s cubic-bezier(.34,1.56,.64,1);box-shadow:0 16px 48px rgba(26,92,46,.2);}
+.m-title{font-size:16px;font-weight:800;color:var(--p1);margin-bottom:18px;}
+.m-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;
+  padding-top:14px;border-top:1px solid var(--border);}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fg{display:flex;flex-direction:column;}
+.fg.full{grid-column:1/-1;}
+
+/* GRAND TOTAL */
+.grand-total-box{background:linear-gradient(135deg,#1a5c2e,#2d8a4e);
+  border-radius:16px;padding:20px 24px;color:#fff;text-align:center;margin-bottom:18px;}
+.gt-lbl{font-size:13px;opacity:.8;margin-bottom:6px;}
+.gt-val{font-size:40px;font-weight:900;letter-spacing:1px;}
+.gt-sub{font-size:12px;opacity:.7;margin-top:6px;}
+
+@media(max-width:768px){
+  .sum-grid{grid-template-columns:1fr 1fr;}
+  .meter-grid{grid-template-columns:1fr 1fr;}
+  .content{padding:12px;}
+  .fgrid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="lbox">
+    <div class="licon">🏪</div>
+    <div class="ltitle">نظام إدارة المحطة</div>
+    <div class="lsub">شعبة تقنية المعلومات — V1.0.0</div>
+    <div class="lerr" id="lerr"></div>
+    <div class="lf"><label class="ll">اسم المستخدم</label>
+      <input class="li" id="li-u" type="text" placeholder="اسم المستخدم" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="lf"><label class="ll">كلمة المرور</label>
+      <input class="li" id="li-p" type="password" placeholder="كلمة المرور" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="lbtn" id="lbtn" onclick="doLogin()">دخول ←</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="header">
+    <div class="header-top">
+      <div class="h-brand">
+        <div class="h-ico">🏪</div>
+        <div>
+          <div class="h-name" id="h-station-name">إدارة المحطة</div>
+          <div class="h-sub" id="h-date">—</div>
+        </div>
+      </div>
+      <div class="h-right">
+        <span class="h-user" id="h-user">—</span>
+        <button class="h-btn" onclick="doLogout()">🚪 خروج</button>
+      </div>
+    </div>
+    <div class="nav-tabs">
+      <div class="ntab active" onclick="goTab('accountant',this)">💰 المحاسب</div>
+      <div class="ntab" onclick="goTab('products',this)">🛢️ المنتوجات</div>
+      <div class="ntab" onclick="goTab('history',this)">📋 سجل اليوميات</div>
+      <div class="ntab" onclick="goTab('weekly',this)">📊 التقارير الأسبوعية</div>
+      <div class="ntab" id="tab-settings-btn" onclick="goTab('settings',this)" style="display:none">⚙️ الإعدادات</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ المحاسب TAB ══ -->
+    <div id="tab-accountant">
+
+      <!-- Grand Total -->
+      <div class="grand-total-box">
+        <div class="gt-lbl">💰 المبلغ الإجمالي لليوم</div>
+        <div class="gt-val" id="grand-total">0</div>
+        <div class="gt-sub">دينار عراقي</div>
+      </div>
+
+      <!-- Product Totals -->
+      <div class="sum-grid" id="product-totals"></div>
+
+      <!-- Pumps -->
+      <div class="sec-hdr" style="border-radius:var(--r) var(--r) 0 0;border:1.5px solid var(--border);border-bottom:2px solid var(--border)">
+        <div class="sec-title"><div class="sdot"></div>⛽ عدادات المضخات</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-o btn-sm" onclick="openAddPumpQuick()" id="btn-add-pump-quick">➕ إضافة مضخة</button>
+          <button class="btn btn-o btn-sm" onclick="autoFillOpening()">🔄 نقل الختامي لافتتاحي</button>
+        </div>
+      </div>
+      <div id="pumps-container" style="background:#fff;border:1.5px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r);padding:16px"></div>
+
+      <!-- Gasoil Distribution -->
+      <div class="section" style="margin-top:14px" id="gasoil-dist-section">
+        <div class="sec-hdr">
+          <div class="sec-title"><div class="sdot" style="background:#6366f1"></div>🛢️ توزيع مبيعات زيت الغاز</div>
+          <div style="font-size:12px;color:var(--t3)">إجمالي زيت الغاز: <span id="gasoil-total-lbl" style="font-weight:700;color:#6366f1">0</span> لتر</div>
+        </div>
+        <div style="padding:16px">
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px" id="gasoil-dist-grid">
+          <!-- filled by JS -->
+          </div>
+          <div style="margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            <div style="background:rgba(99,102,241,.08);border:1.5px solid rgba(99,102,241,.2);border-radius:12px;padding:12px;text-align:center">
+              <div style="font-size:11px;color:#6366f1;font-weight:700;margin-bottom:4px">💵 إجمالي النقدي</div>
+              <div style="font-size:22px;font-weight:900;color:#6366f1" id="gasoil-cash-total">0</div>
+              <div style="font-size:10px;color:var(--t3)">دينار</div>
+            </div>
+            <div style="background:rgba(217,119,6,.08);border:1.5px solid rgba(217,119,6,.2);border-radius:12px;padding:12px;text-align:center">
+              <div style="font-size:11px;color:var(--warn);font-weight:700;margin-bottom:4px">📋 الأجل واستمارة 9</div>
+              <div style="font-size:22px;font-weight:900;color:var(--warn)" id="gasoil-defer-total">0</div>
+              <div style="font-size:10px;color:var(--t3)">لتر (بدون ثمن نقدي)</div>
+            </div>
+            <div style="background:rgba(26,92,46,.08);border:1.5px solid rgba(26,92,46,.2);border-radius:12px;padding:12px;text-align:center">
+              <div style="font-size:11px;color:var(--p1);font-weight:700;margin-bottom:4px">📊 إجمالي الكميات</div>
+              <div style="font-size:22px;font-weight:900;color:var(--p1)" id="gasoil-qty-total">0</div>
+              <div style="font-size:10px;color:var(--t3)">لتر موزعة</div>
+            </div>
+          </div>
+          <div id="gasoil-diff" style="display:none;margin-top:10px;padding:10px 14px;border-radius:10px;font-size:12px;font-weight:700;text-align:center"></div>
+        </div>
+      </div>
+
+      <!-- Payment Summary -->
+      <div class="section" style="margin-top:14px">
+        <div class="sec-hdr">
+          <div class="sec-title"><div class="sdot" style="background:#0369a1"></div>💳 ملخص طرق الدفع</div>
+          <div style="font-size:12px;color:var(--t3)">المجموع: <span id="pay-grand" style="font-weight:700;color:var(--p1)">0</span> دينار</div>
+        </div>
+        <div style="padding:16px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+
+            <!-- POS -->
+            <div style="border:2px solid #0369a133;border-radius:14px;padding:14px;background:#0369a106">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                <div style="width:36px;height:36px;background:#0369a1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px">💳</div>
+                <div>
+                  <div style="font-size:13px;font-weight:800;color:#0369a1">الدفع الإلكتروني POS</div>
+                  <div style="font-size:10px;color:var(--t3)">المبالغ المدفوعة إلكترونياً</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px" id="pos-entries">
+                <div style="display:flex;gap:8px;align-items:center">
+                  <input type="number" class="pos-entry fi" placeholder="المبلغ بالدينار" oninput="calcPayments()"
+                    style="flex:1;border-color:#0369a133;text-align:center;font-size:14px;font-weight:700;color:#0369a1">
+                  <input type="text" class="pos-note fi" placeholder="ملاحظة (اختياري)"
+                    style="flex:1;font-size:12px;border-color:#0369a133">
+                </div>
+              </div>
+              <button onclick="addPosEntry()" style="margin-top:8px;width:100%;padding:7px;background:#0369a114;border:1.5px dashed #0369a144;border-radius:8px;cursor:pointer;font-family:Cairo,sans-serif;font-size:12px;color:#0369a1;font-weight:600">+ إضافة مبلغ POS</button>
+              <div style="margin-top:12px;padding:10px;background:#0369a10e;border-radius:10px;text-align:center">
+                <div style="font-size:11px;color:#0369a1;margin-bottom:2px">إجمالي POS</div>
+                <div id="pos-total" style="font-size:22px;font-weight:900;color:#0369a1">0</div>
+                <div style="font-size:10px;color:var(--t3)">دينار</div>
+              </div>
+            </div>
+
+            <!-- CHEQUE -->
+            <div style="border:2px solid #7c3aed33;border-radius:14px;padding:14px;background:#7c3aed06">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                <div style="width:36px;height:36px;background:#7c3aed;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px">🏦</div>
+                <div>
+                  <div style="font-size:13px;font-weight:800;color:#7c3aed">الدفع بالصك</div>
+                  <div style="font-size:10px;color:var(--t3)">صكوك مصرفية ومالية</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px" id="cheque-entries">
+                <div style="display:flex;gap:8px;align-items:center">
+                  <input type="number" class="cheque-entry fi" placeholder="مبلغ الصك" oninput="calcPayments()"
+                    style="flex:1;border-color:#7c3aed33;text-align:center;font-size:14px;font-weight:700;color:#7c3aed">
+                  <input type="text" class="cheque-note fi" placeholder="رقم الصك / البنك"
+                    style="flex:1;font-size:12px;border-color:#7c3aed33">
+                </div>
+              </div>
+              <button onclick="addChequeEntry()" style="margin-top:8px;width:100%;padding:7px;background:#7c3aed14;border:1.5px dashed #7c3aed44;border-radius:8px;cursor:pointer;font-family:Cairo,sans-serif;font-size:12px;color:#7c3aed;font-weight:600">+ إضافة صك</button>
+              <div style="margin-top:12px;padding:10px;background:#7c3aed0e;border-radius:10px;text-align:center">
+                <div style="font-size:11px;color:#7c3aed;margin-bottom:2px">إجمالي الصكوك</div>
+                <div id="cheque-total" style="font-size:22px;font-weight:900;color:#7c3aed">0</div>
+                <div style="font-size:10px;color:var(--t3)">دينار</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Summary Bar -->
+          <div style="background:var(--bg2);border-radius:12px;padding:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
+            <div>
+              <div style="font-size:11px;color:var(--t3);margin-bottom:3px">💵 نقدي</div>
+              <div id="pay-cash" style="font-size:18px;font-weight:900;color:var(--a3)">0</div>
+              <div style="font-size:10px;color:var(--t3)">دينار</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--t3);margin-bottom:3px">💳 POS + 🏦 صك</div>
+              <div id="pay-electronic" style="font-size:18px;font-weight:900;color:#0369a1">0</div>
+              <div style="font-size:10px;color:var(--t3)">دينار</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--t3);margin-bottom:3px">📊 الإجمالي الكلي</div>
+              <div id="pay-grand" style="font-size:18px;font-weight:900;color:var(--p1)">0</div>
+              <div style="font-size:10px;color:var(--t3)">دينار</div>
+            </div>
+          </div>
+          <div id="pay-diff" style="display:none;margin-top:10px;padding:9px 14px;border-radius:10px;font-size:12px;font-weight:700;text-align:center"></div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="section" style="margin-top:14px">
+        <div class="sec-hdr"><div class="sec-title"><div class="sdot"></div>📝 ملاحظات اليوم</div></div>
+        <div style="padding:14px">
+          <textarea class="fi" id="day-notes" rows="3" style="resize:vertical" placeholder="أي ملاحظات إضافية..."></textarea>
+        </div>
+      </div>
+
+      <!-- Daily Deductions -->
+      <div class="section" style="margin-top:14px">
+        <div class="sec-hdr">
+          <div class="sec-title"><div class="sdot" style="background:#dc2626;box-shadow:0 0 8px rgba(220,38,38,.4)"></div>✂️ استقطاع الأرباح اليومي</div>
+          <button class="btn btn-o btn-sm" onclick="calcDailyDeductions()">🔄 احتساب الصافي</button>
+        </div>
+        <div style="padding:16px">
+
+          <!-- Products deductions -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+            <div style="border:1.5px solid #ef444433;border-radius:12px;padding:12px;background:#ef444406">
+              <div style="font-size:12px;font-weight:700;color:#ef4444;margin-bottom:8px">⛽ بنزين محسن</div>
+              <label class="fl">استقطاع (دينار/لتر)</label>
+              <input class="fi" type="number" step="0.01" id="daily-ded-premium" placeholder="0.00" min="0" oninput="calcDailyDeductions()" style="border-color:#ef444444">
+              <div style="margin-top:4px;font-size:10px;color:var(--t3)">كمية: <span id="daily-qty-premium" style="font-weight:700;color:#ef4444">—</span> ل</div>
+              <div style="margin-top:2px;font-size:10px;color:var(--t3)">استقطاع: <span id="daily-ded-amt-premium" style="font-weight:700;color:#dc2626">—</span> د</div>
+              <div style="margin-top:2px;font-size:11px;color:var(--t3)">صافي: <span id="daily-net-premium" style="font-weight:700;color:#ef4444">—</span></div>
+            </div>
+            <div style="border:1.5px solid #f9731633;border-radius:12px;padding:12px;background:#f9731606">
+              <div style="font-size:12px;font-weight:700;color:#f97316;margin-bottom:8px">⛽ بنزين عادي</div>
+              <label class="fl">استقطاع (دينار/لتر)</label>
+              <input class="fi" type="number" step="0.01" id="daily-ded-regular" placeholder="0.00" min="0" oninput="calcDailyDeductions()" style="border-color:#f9731644">
+              <div style="margin-top:4px;font-size:10px;color:var(--t3)">كمية: <span id="daily-qty-regular" style="font-weight:700;color:#f97316">—</span> ل</div>
+              <div style="margin-top:2px;font-size:10px;color:var(--t3)">استقطاع: <span id="daily-ded-amt-regular" style="font-weight:700;color:#dc2626">—</span> د</div>
+              <div style="margin-top:2px;font-size:11px;color:var(--t3)">صافي: <span id="daily-net-regular" style="font-weight:700;color:#f97316">—</span></div>
+            </div>
+            <div style="border:1.5px solid #10b98133;border-radius:12px;padding:12px;background:#10b98106">
+              <div style="font-size:12px;font-weight:700;color:#10b981;margin-bottom:8px">🛢️ نفط أبيض</div>
+              <label class="fl">استقطاع (دينار/لتر)</label>
+              <input class="fi" type="number" step="0.01" id="daily-ded-kerosene" placeholder="0.00" min="0" oninput="calcDailyDeductions()" style="border-color:#10b98144">
+              <div style="margin-top:4px;font-size:10px;color:var(--t3)">كمية: <span id="daily-qty-kerosene" style="font-weight:700;color:#10b981">—</span> ل</div>
+              <div style="margin-top:2px;font-size:10px;color:var(--t3)">استقطاع: <span id="daily-ded-amt-kerosene" style="font-weight:700;color:#dc2626">—</span> د</div>
+              <div style="margin-top:2px;font-size:11px;color:var(--t3)">صافي: <span id="daily-net-kerosene" style="font-weight:700;color:#10b981">—</span></div>
+            </div>
+            <div style="border:1.5px solid #6366f133;border-radius:12px;padding:12px;background:#6366f106">
+              <div style="font-size:12px;font-weight:700;color:#6366f1;margin-bottom:8px">🛢️ زيت الغاز (كلي)</div>
+              <label class="fl">استقطاع (دينار/لتر)</label>
+              <input class="fi" type="number" step="0.01" id="daily-ded-gasoil" placeholder="0.00" min="0" oninput="calcDailyDeductions()" style="border-color:#6366f144">
+              <div style="margin-top:4px;font-size:10px;color:var(--t3)">كمية: <span id="daily-qty-gasoil" style="font-weight:700;color:#6366f1">—</span> ل</div>
+              <div style="margin-top:2px;font-size:10px;color:var(--t3)">استقطاع: <span id="daily-ded-amt-gasoil" style="font-weight:700;color:#dc2626">—</span> د</div>
+              <div style="margin-top:2px;font-size:11px;color:var(--t3)">صافي: <span id="daily-net-gasoil" style="font-weight:700;color:#6366f1">—</span></div>
+            </div>
+          </div>
+
+          <!-- Gasoil types deductions -->
+          <div style="border:1.5px solid #6366f133;border-radius:12px;padding:14px;background:#6366f104;margin-bottom:14px">
+            <div style="font-size:12px;font-weight:700;color:#6366f1;margin-bottom:10px">🛢️ استقطاع زيت الغاز حسب النوع</div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+              <div>
+                <label class="fl" style="color:#6366f1">رقابة إلكترونية</label>
+                <input class="fi" type="number" step="0.01" id="daily-ded-gasoil_electronic" placeholder="د/ل" min="0" oninput="calcDailyDeductions()" style="border-color:#6366f144;font-size:12px;text-align:center">
+                <div style="margin-top:3px;font-size:9px;text-align:center;color:var(--t3)">استقطاع: <span id="daily-ded-amt-gasoil_electronic" style="color:#dc2626;font-weight:700">—</span> د</div>
+                <div style="margin-top:2px;font-size:9px;text-align:center;color:var(--t3)">صافي: <span id="daily-net-gasoil_electronic" style="color:#6366f1;font-weight:700">—</span></div>
+              </div>
+              <div>
+                <label class="fl" style="color:#8b5cf6">قطاع خاص</label>
+                <input class="fi" type="number" step="0.01" id="daily-ded-gasoil_private" placeholder="د/ل" min="0" oninput="calcDailyDeductions()" style="border-color:#8b5cf644;font-size:12px;text-align:center">
+                <div style="margin-top:3px;font-size:9px;text-align:center;color:var(--t3)">استقطاع: <span id="daily-ded-amt-gasoil_private" style="color:#dc2626;font-weight:700">—</span> د</div>
+                <div style="margin-top:2px;font-size:9px;text-align:center;color:var(--t3)">صافي: <span id="daily-net-gasoil_private" style="color:#8b5cf6;font-weight:700">—</span></div>
+              </div>
+              <div>
+                <label class="fl" style="color:#0369a1">مولدات</label>
+                <input class="fi" type="number" step="0.01" id="daily-ded-gasoil_generator" placeholder="د/ل" min="0" oninput="calcDailyDeductions()" style="border-color:#0369a144;font-size:12px;text-align:center">
+                <div style="margin-top:3px;font-size:9px;text-align:center;color:var(--t3)">استقطاع: <span id="daily-ded-amt-gasoil_generator" style="color:#dc2626;font-weight:700">—</span> د</div>
+                <div style="margin-top:2px;font-size:9px;text-align:center;color:var(--t3)">صافي: <span id="daily-net-gasoil_generator" style="color:#0369a1;font-weight:700">—</span></div>
+              </div>
+              <div>
+                <label class="fl" style="color:#d97706">استمارة 9</label>
+                <input class="fi" type="number" step="0.01" id="daily-ded-gasoil_form9" placeholder="د/ل" min="0" oninput="calcDailyDeductions()" style="border-color:#d9770644;font-size:12px;text-align:center">
+                <div style="margin-top:3px;font-size:9px;text-align:center;color:var(--t3)">كمية: <span id="daily-qty-gasoil_form9" style="color:#d97706;font-weight:700">—</span> ل</div>
+                <div style="margin-top:2px;font-size:9px;text-align:center;color:var(--t3)">استقطاع: <span id="daily-ded-amt-gasoil_form9" style="color:#dc2626;font-weight:700">—</span> د</div>
+              </div>
+              <div>
+                <label class="fl" style="color:#dc2626">الأجل</label>
+                <input class="fi" type="number" step="0.01" id="daily-ded-gasoil_credit" placeholder="د/ل" min="0" oninput="calcDailyDeductions()" style="border-color:#dc262644;font-size:12px;text-align:center">
+                <div style="margin-top:3px;font-size:9px;text-align:center;color:var(--t3)">كمية: <span id="daily-qty-gasoil_credit" style="color:#dc2626;font-weight:700">—</span> ل</div>
+                <div style="margin-top:2px;font-size:9px;text-align:center;color:var(--t3)">استقطاع: <span id="daily-ded-amt-gasoil_credit" style="color:#dc2626;font-weight:700">—</span> د</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Net Summary -->
+          <div style="background:linear-gradient(135deg,#1a5c2e,#2d8a4e);border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center">
+            <div>
+              <div style="font-size:11px;color:rgba(255,255,255,.7);margin-bottom:4px">💰 إجمالي المبيعات</div>
+              <div style="font-size:24px;font-weight:900;color:#fff" id="daily-gross-total">0</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.6)">دينار</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:rgba(255,255,255,.7);margin-bottom:4px">✂️ إجمالي الاستقطاع</div>
+              <div style="font-size:24px;font-weight:900;color:#fca5a5" id="daily-total-ded">0</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.6)">دينار</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:rgba(255,255,255,.7);margin-bottom:4px">✅ الصافي النهائي</div>
+              <div style="font-size:24px;font-weight:900;color:#86efac" id="daily-net-total">0</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.6)">دينار</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- زر حفظ اليوم الكبير -->
+      <div style="margin-top:24px;padding-bottom:24px">
+        <button onclick="saveDay()" id="btn-save-day-main"
+          style="width:100%;padding:22px;background:linear-gradient(135deg,#15803d,#16a34a,#22c55e);
+          color:#fff;border:none;border-radius:18px;font-family:'Cairo',sans-serif;
+          font-size:22px;font-weight:900;cursor:pointer;letter-spacing:.5px;
+          box-shadow:0 8px 32px rgba(22,163,74,.4);transition:all .25s;
+          display:flex;align-items:center;justify-content:center;gap:14px">
+          <span style="font-size:32px">💾</span>
+          <span>حفظ اليوم</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ المنتوجات TAB ══ -->
+    <div id="tab-products" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <!-- Sales Summary -->
+        <div class="section">
+          <div class="sec-hdr"><div class="sec-title"><div class="sdot"></div>📊 إجمالي المبيعات</div></div>
+          <div style="padding:16px" id="sales-summary"></div>
+        </div>
+        <!-- Tank Inventory -->
+        <div class="section">
+          <div class="sec-hdr">
+            <div class="sec-title"><div class="sdot"></div>🛢️ مخزون الخزانات</div>
+            <button class="btn btn-p btn-sm" onclick="saveTank()">💾 حفظ</button>
+          </div>
+          <div style="padding:16px" id="tank-form"></div>
+        </div>
+      </div>
+      <!-- Price Settings -->
+      <div class="section">
+        <div class="sec-hdr">
+          <div class="sec-title"><div class="sdot"></div>💲 أسعار المنتوجات (دينار/لتر)</div>
+          <button class="btn btn-p btn-sm" onclick="savePrices()">💾 حفظ الأسعار</button>
+        </div>
+        <div style="padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px" id="prices-form"></div>
+      </div>
+    </div>
+
+    <!-- ══ سجل اليوميات TAB ══ -->
+    <div id="tab-history" style="display:none">
+      <div class="section">
+        <div class="sec-hdr">
+          <div class="sec-title"><div class="sdot"></div>📋 سجل اليوميات</div>
+          <button class="btn btn-o btn-sm" onclick="exportHistory()">📤 تصدير</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>التاريخ</th>
+                <th style="color:#ef9999">بنزين محسن</th>
+                <th style="color:#fbbf24">بنزين عادي</th>
+                <th style="color:#a5b4fc">زيت الغاز</th>
+                <th style="color:#6ee7b7">نفط أبيض</th>
+                <th>الإجمالي</th>
+                <th>حفظ بواسطة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="history-tb"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ══ التقارير الأسبوعية TAB ══ -->
+    <div id="tab-weekly" style="display:none">
+
+      <!-- Date Range Selector -->
+      <div class="section">
+        <div class="sec-hdr">
+          <div class="sec-title"><div class="sdot"></div>📅 تحديد الفترة الزمنية</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-o btn-sm" onclick="setWeekRange()">هذا الأسبوع</button>
+            <button class="btn btn-o btn-sm" onclick="setLastWeekRange()">الأسبوع الماضي</button>
+            <button class="btn btn-p btn-sm" onclick="generateWeeklyReport()">📊 توليد التقرير</button>
+            <button class="btn btn-o btn-sm" onclick="exportWeeklyExcel()">📥 تصدير Excel</button>
+          </div>
+        </div>
+        <div style="padding:14px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div><label class="fl">من تاريخ</label><input class="fi" id="w-from" type="date" style="width:160px"></div>
+          <div><label class="fl">إلى تاريخ</label><input class="fi" id="w-to" type="date" style="width:160px"></div>
+          <div id="w-days-lbl" style="font-size:13px;color:var(--t3);margin-top:16px"></div>
+        </div>
+      </div>
+
+      <!-- Product Sales Summary -->
+      <div class="section">
+        <div class="sec-hdr"><div class="sec-title"><div class="sdot"></div>🛢️ إجمالي المبيعات بالليتر</div></div>
+        <div style="padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px" id="w-product-summary"></div>
+      </div>
+
+      <!-- Gasoil Breakdown -->
+      <div class="section">
+        <div class="sec-hdr">
+          <div class="sec-title"><div class="sdot" style="background:#6366f1"></div>🛢️ تفصيل مبيعات زيت الغاز</div>
+        </div>
+        <div style="padding:16px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px" id="w-gasoil-breakdown"></div>
+        <div style="padding:0 16px 16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px" id="w-gasoil-totals"></div>
+      </div>
+
+      <!-- Payment & Deduction Report -->
+      <div class="section">
+        <div class="sec-hdr">
+          <div class="sec-title"><div class="sdot"></div>💳 ملخص الدفع والاستقطاعات</div>
+          <button class="btn btn-o btn-sm" onclick="openDeductionSettings()">⚙️ إعداد الاستقطاعات</button>
+        </div>
+        <div style="padding:16px" id="w-payment-report"></div>
+      </div>
+
+      <!-- Daily Breakdown Table -->
+      <div class="section">
+        <div class="sec-hdr"><div class="sec-title"><div class="sdot"></div>📋 تفاصيل يومية</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>التاريخ</th>
+                <th style="color:#ef9999">محسن (ل)</th>
+                <th style="color:#fbbf24">عادي (ل)</th>
+                <th style="color:#a5b4fc">غاز (ل)</th>
+                <th style="color:#6ee7b7">أبيض (ل)</th>
+                <th>إجمالي (د)</th>
+              </tr>
+            </thead>
+            <tbody id="w-daily-tb"></tbody>
+            <tfoot id="w-daily-foot"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ الإعدادات TAB ══ -->
+    <div id="tab-settings" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <!-- Station Info -->
+        <div class="section">
+          <div class="sec-hdr"><div class="sec-title"><div class="sdot"></div>🏪 معلومات المحطة</div></div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+            <div><label class="fl">اسم المحطة</label><input class="fi" id="s-name" type="text"></div>
+            <div><label class="fl">المالك</label><input class="fi" id="s-owner" type="text"></div>
+            <div><label class="fl">الموقع</label><input class="fi" id="s-location" type="text"></div>
+            <button class="btn btn-p btn-sm" onclick="saveStation()">💾 حفظ</button>
+          </div>
+        </div>
+        <!-- Users Management -->
+        <div class="section" id="users-section">
+          <div class="sec-hdr">
+            <div class="sec-title"><div class="sdot"></div>👤 إدارة المستخدمين</div>
+            <button class="btn btn-p btn-sm" onclick="openAddUser()">➕ إضافة مستخدم</button>
+          </div>
+          <div style="padding:16px" id="users-list"></div>
+        </div>
+
+        <!-- Pumps Management -->
+        <div class="section">
+          <div class="sec-hdr">
+            <div class="sec-title"><div class="sdot"></div>⛽ إدارة المضخات</div>
+            <button class="btn btn-p btn-sm" onclick="openAddPump()">➕ إضافة مضخة</button>
+          </div>
+          <div style="padding:16px" id="pumps-settings"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+
+<!-- ADD USER MODAL -->
+<div class="overlay" id="ov-user" onclick="closeOv(event,'ov-user')">
+  <div class="modal" style="width:440px">
+    <div class="m-title" id="user-modal-title">👤 إضافة مستخدم</div>
+    <input type="hidden" id="user-eid">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="fl">الاسم الكامل *</label><input class="fi" id="u-fullname" type="text" placeholder="الاسم"></div>
+      <div><label class="fl">اسم المستخدم *</label><input class="fi" id="u-username" type="text" placeholder="username"></div>
+      <div><label class="fl">كلمة المرور *</label><input class="fi" id="u-password" type="password" placeholder="كلمة المرور"></div>
+      <div>
+        <label class="fl">الصلاحية</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
+          <div onclick="selectRole('user')" id="role-user"
+            style="border:2px solid var(--border2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;transition:all .2s">
+            <div style="font-size:20px">👤</div>
+            <div style="font-size:13px;font-weight:700;margin-top:4px">محاسب</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:3px">إدخال عدادات فقط</div>
+          </div>
+          <div onclick="selectRole('admin')" id="role-admin"
+            style="border:2px solid var(--border2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;transition:all .2s">
+            <div style="font-size:20px">🔑</div>
+            <div style="font-size:13px;font-weight:700;margin-top:4px">مدير</div>
+            <div style="font-size:10px;color:var(--t3);margin-top:3px">صلاحيات كاملة</div>
+          </div>
+        </div>
+        <input type="hidden" id="u-role" value="user">
+      </div>
+      <div id="u-perms-info" style="background:rgba(26,92,46,.06);border:1px solid rgba(26,92,46,.2);border-radius:10px;padding:12px;font-size:12px">
+        <div style="font-weight:700;color:var(--p1);margin-bottom:8px">🔒 صلاحيات المحاسب:</div>
+        <div style="display:flex;flex-direction:column;gap:4px;color:var(--t2)">
+          <div>✅ إدخال الأرقام الافتتاحية والختامية</div>
+          <div>✅ حساب المبالغ اليومية</div>
+          <div>✅ حفظ اليوم وعرض التقارير</div>
+          <div>❌ إضافة/حذف المضخات</div>
+          <div>❌ تعديل الأسعار</div>
+          <div>❌ إدارة المستخدمين</div>
+        </div>
+      </div>
+    </div>
+    <div class="m-footer">
+      <button class="btn btn-o" onclick="closeModal('ov-user')">إلغاء</button>
+      <button class="btn btn-p" onclick="saveUser()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK ADD PUMP MODAL -->
+<div class="overlay" id="ov-quick-pump" onclick="closeOv(event,'ov-quick-pump')">
+  <div class="modal" style="width:420px">
+    <div class="m-title">➕ إضافة مضخة جديدة</div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label class="fl">اسم المضخة *</label>
+        <input class="fi" id="qp-name" type="text" placeholder="مثال: مضخة 5 — بنزين محسن">
+      </div>
+      <div>
+        <label class="fl">نوع المنتج</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="qp-products">
+          <div onclick="selectProduct('premium')" class="prod-select" data-prod="premium"
+            style="border:2px solid #ef444433;border-radius:10px;padding:10px;text-align:center;cursor:pointer;background:#ef444408;transition:all .2s">
+            <div style="font-size:18px">⛽</div>
+            <div style="font-size:12px;font-weight:700;color:#ef4444">بنزين محسن</div>
+          </div>
+          <div onclick="selectProduct('regular')" class="prod-select" data-prod="regular"
+            style="border:2px solid #f9731633;border-radius:10px;padding:10px;text-align:center;cursor:pointer;background:#f9731608;transition:all .2s">
+            <div style="font-size:18px">⛽</div>
+            <div style="font-size:12px;font-weight:700;color:#f97316">بنزين عادي</div>
+          </div>
+          <div onclick="selectProduct('gasoil')" class="prod-select" data-prod="gasoil"
+            style="border:2px solid #6366f133;border-radius:10px;padding:10px;text-align:center;cursor:pointer;background:#6366f108;transition:all .2s">
+            <div style="font-size:18px">🛢️</div>
+            <div style="font-size:12px;font-weight:700;color:#6366f1">زيت الغاز</div>
+          </div>
+          <div onclick="selectProduct('kerosene')" class="prod-select" data-prod="kerosene"
+            style="border:2px solid #10b98133;border-radius:10px;padding:10px;text-align:center;cursor:pointer;background:#10b98108;transition:all .2s">
+            <div style="font-size:18px">🛢️</div>
+            <div style="font-size:12px;font-weight:700;color:#10b981">نفط أبيض</div>
+          </div>
+        </div>
+        <input type="hidden" id="qp-product" value="">
+      </div>
+    </div>
+    <div class="m-footer">
+      <button class="btn btn-o" onclick="closeModal('ov-quick-pump')">إلغاء</button>
+      <button class="btn btn-p" onclick="saveQuickPump()">💾 إضافة</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- DEDUCTION SETTINGS MODAL -->
+<div class="overlay" id="ov-deduction" onclick="closeOv(event,'ov-deduction')">
+  <div class="modal" style="width:600px">
+    <div class="m-title">⚙️ إعداد الاستقطاعات والدفع</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+
+      <div style="padding:10px;background:var(--bg2);border-radius:10px;font-size:12px;color:var(--t2)">
+        أدخل نسبة أو مبلغ الاستقطاع لكل منتوج. سيتم احتساب الاستقطاع من إجمالي مبيعات الفترة.
+      </div>
+
+      <!-- Products -->
+      <div style="border:1.5px solid #ef444433;border-radius:12px;padding:12px;background:#ef444406">
+        <div style="font-weight:700;color:#ef4444;margin-bottom:10px">⛽ بنزين محسن</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div>
+            <label class="fl">💳 دفع إلكتروني (دينار)</label>
+            <input class="fi" type="number" id="ded-elec-premium" placeholder="0" min="0">
+          </div>
+          <div>
+            <label class="fl">📄 صكوك (دينار)</label>
+            <input class="fi" type="number" id="ded-check-premium" placeholder="0" min="0">
+          </div>
+          <div>
+            <label class="fl">✂️ استقطاع الأرباح (دينار)</label>
+            <input class="fi" type="number" id="ded-profit-premium" placeholder="0" min="0">
+          </div>
+        </div>
+      </div>
+      <div style="border:1.5px solid #f9731633;border-radius:12px;padding:12px;background:#f9731606">
+        <div style="font-weight:700;color:#f97316;margin-bottom:10px">⛽ بنزين عادي</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div>
+            <label class="fl">💳 دفع إلكتروني (دينار)</label>
+            <input class="fi" type="number" id="ded-elec-regular" placeholder="0" min="0">
+          </div>
+          <div>
+            <label class="fl">📄 صكوك (دينار)</label>
+            <input class="fi" type="number" id="ded-check-regular" placeholder="0" min="0">
+          </div>
+          <div>
+            <label class="fl">✂️ استقطاع الأرباح (دينار)</label>
+            <input class="fi" type="number" id="ded-profit-regular" placeholder="0" min="0">
+          </div>
+        </div>
+      </div>
+      <div style="border:1.5px solid #10b98133;border-radius:12px;padding:12px;background:#10b98106">
+        <div style="font-weight:700;color:#10b981;margin-bottom:10px">🛢️ نفط أبيض</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div>
+            <label class="fl">💳 دفع إلكتروني (دينار)</label>
+            <input class="fi" type="number" id="ded-elec-kerosene" placeholder="0" min="0">
+          </div>
+          <div>
+            <label class="fl">📄 صكوك (دينار)</label>
+            <input class="fi" type="number" id="ded-check-kerosene" placeholder="0" min="0">
+          </div>
+          <div>
+            <label class="fl">✂️ استقطاع الأرباح (دينار)</label>
+            <input class="fi" type="number" id="ded-profit-kerosene" placeholder="0" min="0">
+          </div>
+        </div>
+      </div>
+
+      <!-- Gasoil types deduction -->
+      <div style="border:1.5px solid #6366f133;border-radius:12px;padding:12px;background:#6366f106">
+        <div style="font-weight:700;color:#6366f1;margin-bottom:10px">🛢️ زيت الغاز — حسب النوع</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+          <div>
+            <label class="fl" style="color:#6366f1">رقابة</label>
+            <input class="fi" type="number" id="ded-profit-gasoil_electronic" placeholder="0" min="0" style="border-color:#6366f144">
+          </div>
+          <div>
+            <label class="fl" style="color:#8b5cf6">قطاع خاص</label>
+            <input class="fi" type="number" id="ded-profit-gasoil_private" placeholder="0" min="0" style="border-color:#8b5cf644">
+          </div>
+          <div>
+            <label class="fl" style="color:#0369a1">مولدات</label>
+            <input class="fi" type="number" id="ded-profit-gasoil_generator" placeholder="0" min="0" style="border-color:#0369a144">
+          </div>
+          <div>
+            <label class="fl" style="color:#d97706">استمارة 9</label>
+            <input class="fi" type="number" id="ded-profit-gasoil_form9" placeholder="0" min="0" style="border-color:#d9770644">
+          </div>
+          <div>
+            <label class="fl" style="color:#dc2626">الأجل</label>
+            <input class="fi" type="number" id="ded-profit-gasoil_credit" placeholder="0" min="0" style="border-color:#dc262644">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+          <div>
+            <label class="fl">💳 دفع إلكتروني - زيت الغاز (دينار)</label>
+            <input class="fi" type="number" id="ded-elec-gasoil" placeholder="0" min="0">
+          </div>
+          <div>
+            <label class="fl">📄 صكوك - زيت الغاز (دينار)</label>
+            <input class="fi" type="number" id="ded-check-gasoil" placeholder="0" min="0">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="m-footer">
+      <button class="btn btn-o" onclick="closeModal('ov-deduction')">إلغاء</button>
+      <button class="btn btn-p" onclick="saveDeductions()">💾 حفظ وتطبيق</button>
+    </div>
+  </div>
+</div>
+
+<!-- GASOIL PRICES MODAL -->
+<div class="overlay" id="ov-gasoil-prices" onclick="closeOv(event,'ov-gasoil-prices')">
+  <div class="modal" style="width:440px">
+    <div class="m-title" style="color:#6366f1">🛢️ أسعار زيت الغاز (دينار/لتر)</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="padding:8px 12px;background:#6366f108;border-radius:8px;font-size:11px;color:#6366f1">
+        كل مضخة زيت غاز تختار نوع سعرها بشكل منفصل
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;border:1.5px solid #6366f133;border-radius:10px;background:#6366f106">
+        <div style="flex:1;font-size:13px;font-weight:700;color:#6366f1">رقابة إلكترونية</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="number" id="gp-gasoil_electronic" style="width:110px;background:#fff;border:1.5px solid #6366f133;border-radius:8px;padding:7px 10px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;color:#6366f1;outline:none;text-align:center" min="0" placeholder="0">
+          <span style="font-size:11px;color:var(--t3)">د</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;border:1.5px solid #6366f133;border-radius:10px;background:#6366f106">
+        <div style="flex:1;font-size:13px;font-weight:700;color:#6366f1">قطاع خاص</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="number" id="gp-gasoil_private" style="width:110px;background:#fff;border:1.5px solid #6366f133;border-radius:8px;padding:7px 10px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;color:#6366f1;outline:none;text-align:center" min="0" placeholder="0">
+          <span style="font-size:11px;color:var(--t3)">د</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;border:1.5px solid #6366f133;border-radius:10px;background:#6366f106">
+        <div style="flex:1;font-size:13px;font-weight:700;color:#6366f1">مولدات</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="number" id="gp-gasoil_generator" style="width:110px;background:#fff;border:1.5px solid #6366f133;border-radius:8px;padding:7px 10px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;color:#6366f1;outline:none;text-align:center" min="0" placeholder="0">
+          <span style="font-size:11px;color:var(--t3)">د</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;border:1.5px solid #6366f133;border-radius:10px;background:#6366f106">
+        <div style="flex:1;font-size:13px;font-weight:700;color:#6366f1">استمارة 9</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="number" id="gp-gasoil_form9" style="width:110px;background:#fff;border:1.5px solid #6366f133;border-radius:8px;padding:7px 10px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;color:#6366f1;outline:none;text-align:center" min="0" placeholder="0">
+          <span style="font-size:11px;color:var(--t3)">د</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;border:1.5px solid #6366f133;border-radius:10px;background:#6366f106">
+        <div style="flex:1;font-size:13px;font-weight:700;color:#6366f1">الأجل</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="number" id="gp-gasoil_credit" style="width:110px;background:#fff;border:1.5px solid #6366f133;border-radius:8px;padding:7px 10px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;color:#6366f1;outline:none;text-align:center" min="0" placeholder="0">
+          <span style="font-size:11px;color:var(--t3)">د</span>
+        </div>
+      </div>
+    </div>
+    <div class="m-footer">
+      <button class="btn btn-o" onclick="closeModal('ov-gasoil-prices')">إلغاء</button>
+      <button class="btn btn-p" onclick="saveGasoilPrices()">💾 حفظ الأسعار</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRICE EDIT MODAL -->
+<div class="overlay" id="ov-price" onclick="closeOv(event,'ov-price')">
+  <div class="modal" style="width:360px;text-align:center">
+    <div class="m-title" id="price-modal-title">تعديل السعر</div>
+    <input type="hidden" id="price-prod-id">
+    <div style="margin:16px 0">
+      <label class="fl" style="text-align:center;display:block;margin-bottom:8px">السعر بالدينار / لتر</label>
+      <input class="fi" id="price-new-val" type="number" min="0" style="font-size:22px;font-weight:800;text-align:center;height:56px">
+    </div>
+    <div class="m-footer" style="justify-content:center">
+      <button class="btn btn-o" onclick="closeModal('ov-price')">إلغاء</button>
+      <button class="btn btn-p" onclick="savePriceInline()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- PUMP MODAL -->
+<div class="overlay" id="ov-pump" onclick="closeOv(event,'ov-pump')">
+  <div class="modal" style="width:400px">
+    <div class="m-title">⛽ إضافة مضخة</div>
+    <input type="hidden" id="pump-eid">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="fl">اسم المضخة</label><input class="fi" id="pump-name" type="text" placeholder="مثال: مضخة 5"></div>
+      <div><label class="fl">المنتج</label>
+        <select class="fi" id="pump-product">
+          <option value="premium">بنزين محسن</option>
+          <option value="regular">بنزين عادي</option>
+          <option value="gasoil">زيت الغاز</option>
+          <option value="kerosene">نفط أبيض</option>
+        </select>
+      </div>
+    </div>
+    <div class="m-footer">
+      <button class="btn btn-o" onclick="closeModal('ov-pump')">إلغاء</button>
+      <button class="btn btn-p" onclick="savePump()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- DAY DETAIL MODAL -->
+<div class="overlay" id="ov-day" onclick="closeOv(event,'ov-day')">
+  <div class="modal" style="width:700px">
+    <div class="m-title" id="day-modal-title">تفاصيل اليوم</div>
+    <div id="day-modal-body"></div>
+    <div class="m-footer">
+      <button class="btn btn-o" onclick="closeModal('ov-day')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let TOKEN = localStorage.getItem('station_token') || '';
+let CU = null, CFG = {}, dayData = {}, records = [];
+
+// ── API ──
+async function api(method, path, body = null) {
+  try {
+    const r = await fetch(API + path, {
+      method,
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN},
+      body: body ? JSON.stringify(body) : null
+    });
+    if (r.status === 401 && path !== '/api/login') {
+      TOKEN = ''; localStorage.removeItem('station_token');
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+      throw new Error('انتهت الجلسة');
+    }
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || `خطأ ${r.status}`);
+    return d;
+  } catch(e) {
+    if (e.message === 'Failed to fetch') throw new Error('لا يوجد اتصال بالسيرفر');
+    throw e;
+  }
+}
+
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = `toast show ${type}`;
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function closeOv(e, id) { if (e.target.id === id) closeModal(id); }
+
+// ── AUTH ──
+async function doLogin() {
+  const u = document.getElementById('li-u').value.trim();
+  const p = document.getElementById('li-p').value;
+  const btn = document.getElementById('lbtn');
+  const err = document.getElementById('lerr');
+  err.style.display = 'none';
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const d = await api('POST', '/api/login', {username: u, password: p});
+    TOKEN = d.token; CU = d.user; localStorage.setItem('station_token', TOKEN);
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    await initApp();
+  } catch(e) { err.textContent = e.message; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'دخول ←'; }
+}
+async function doLogout() {
+  try { await api('POST', '/api/logout'); } catch(e) {}
+  TOKEN = ''; CU = null; localStorage.removeItem('station_token');
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+async function tryAutoLogin() {
+  if (!TOKEN) { document.getElementById('login-screen').style.display = 'flex'; return; }
+  try {
+    const d = await api('GET', '/api/me'); CU = d.user;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    await initApp();
+  } catch(e) {
+    TOKEN = ''; localStorage.removeItem('station_token');
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+}
+
+// ── INIT ──
+async function initApp() {
+  document.getElementById('h-user').textContent = CU.fullname;
+  document.getElementById('h-date').textContent = new Date().toLocaleDateString('ar-SA', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  if (CU.role === 'admin') document.getElementById('tab-settings-btn').style.display = 'flex';
+  // Hide add pump button for non-admin
+  const addPumpBtn = document.getElementById('btn-add-pump-quick');
+  if(addPumpBtn && CU.role !== 'admin') addPumpBtn.style.display = 'none';
+  const [cfg, today, tank] = await Promise.all([
+    api('GET', '/api/config'),
+    api('GET', '/api/today'),
+    api('GET', '/api/tank'),
+  ]);
+  CFG = cfg;
+  document.getElementById('h-station-name').textContent = cfg.station.name || 'إدارة المحطة';
+  renderPumps(cfg.pumps, cfg.prices, today.today, today.yesterday);
+  // إشعار إذا تم نقل الختامي تلقائياً
+  if(!today.today && today.yesterday){
+    const hasData = (today.yesterday.pumps||[]).some(p=>p.meter1?.closing||p.meter2?.closing);
+    if(hasData) setTimeout(()=>toast('🔄 تم نقل أرقام أمس الختامية كافتتاحية لليوم','ok'),800);
+  }
+  renderProductTotals(cfg.pumps, cfg.prices);
+  renderTankForm(tank.inventory, cfg.prices);
+  renderPricesForm(cfg.prices);
+  renderPumpsSettings(cfg.pumps);
+  renderGasoilDistGrid();
+  const savedDed=localStorage.getItem('station_deductions');if(savedDed)deductions=JSON.parse(savedDed);
+  loadHistory();
+}
+
+// ── TABS ──
+function goTab(name, el) {
+  ['accountant','products','history','weekly','settings'].forEach(t => {
+    const e = document.getElementById('tab-' + t);
+    if (e) e.style.display = t === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.ntab').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  if (name === 'history') loadHistory();
+  if (name === 'products') renderSalesSummary();
+  if (name === 'settings') loadUsers();
+  if (name === 'weekly') { setWeekRange(); loadHistory(); }
+}
+
+// ── PRODUCTS CONFIG ──
+const PRODUCTS = [
+  {id:'premium', name:'بنزين محسن', color:'#ef4444'},
+  {id:'regular', name:'بنزين عادي', color:'#f97316'},
+  {id:'gasoil',  name:'زيت الغاز',  color:'#6366f1'},
+  {id:'kerosene',name:'نفط أبيض',   color:'#10b981'},
+];
+
+const GASOIL_PRICE_TYPES = [
+  {id:'gasoil_electronic', name:'رقابة إلكترونية',  key:'gasoil_electronic'},
+  {id:'gasoil_private',    name:'قطاع خاص',         key:'gasoil_private'},
+  {id:'gasoil_generator',  name:'مولدات',            key:'gasoil_generator'},
+  {id:'gasoil_form9',      name:'استمارة 9',         key:'gasoil_form9'},
+  {id:'gasoil_credit',     name:'الأجل',             key:'gasoil_credit'},
+];
+
+function getProd(id) { return PRODUCTS.find(p => p.id === id) || {id,name:id,color:'#888'}; }
+
+// ── PUMPS RENDER ──
+function renderPumps(pumps, prices, todayRec, yesterdayRec) {
+  dayData = {pumps: {}, notes: todayRec?.notes || ''};
+  document.getElementById('day-notes').value = dayData.notes;
+
+  const container = document.getElementById('pumps-container');
+  const activePumps = pumps.filter(p => p.active);
+
+  // Count per product for numbering
+  const productCounters = {};
+
+  // Group by product for display
+  const grouped = {};
+  PRODUCTS.forEach(p => grouped[p.id] = []);
+  activePumps.forEach(pump => {
+    if(grouped[pump.product]) grouped[pump.product].push(pump);
+    else grouped[pump.product] = [pump];
+  });
+
+  let html = '';
+  PRODUCTS.forEach(prod => {
+    const pumpsOfProd = grouped[prod.id] || [];
+    if(pumpsOfProd.length === 0) return;
+    pumpsOfProd.forEach((pump, pumpIdx) => {
+      const price = prices[pump.product] || 0;
+      const saved = todayRec?.pumps?.find(p => p.id === pump.id);
+      const yest = yesterdayRec?.pumps?.find(p => p.id === pump.id);
+      const m1_open = saved?.meter1?.opening ?? (yest?.meter1?.closing ?? '');
+      const m1_close = saved?.meter1?.closing ?? '';
+      const m2_open = saved?.meter2?.opening ?? (yest?.meter2?.closing ?? '');
+      const m2_close = saved?.meter2?.closing ?? '';
+      const autoFilled = !saved && yest && (yest.meter1?.closing || yest.meter2?.closing);
+
+      html += `<div class="pump-card" id="pump-card-${pump.id}">
+      <div class="pump-header">
+        <div>
+          <div class="pump-name" style="display:flex;align-items:center;gap:8px">
+            ⛽ ${prod.name}
+            ${autoFilled?`<span style="background:rgba(22,163,74,.15);color:#16a34a;border:1px solid rgba(22,163,74,.3);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700">🔄 مُنقول من أمس</span>`:''}
+          </div>
+          <span class="prod-badge prod-${pump.product}" style="background:${prod.color}18;color:${prod.color};border-color:${prod.color}44;margin-top:4px;display:inline-flex">${prod.name}</span>
+          <span style="font-size:11px;color:var(--t3);margin-right:8px">السعر: 
+            <span id="price-lbl-${pump.product}" style="font-weight:700;color:${prod.color}">${price.toLocaleString()}</span> د/لتر
+            <button onclick="${pump.product==='gasoil'?'editGasoilPrices()':"editPriceInline('" + pump.product + "')"}" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 4px" title="تعديل السعر">✏️</button>
+          </span>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:11px;color:var(--t3)">إجمالي المضخة</div>
+          <div class="pump-total" id="pump-total-${pump.id}">0</div>
+          <div style="font-size:10px;color:var(--t3)">دينار</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div style="border:1.5px solid ${prod.color}33;border-radius:12px;padding:12px;background:${prod.color}06">
+          <div style="font-size:12px;font-weight:700;color:${prod.color};margin-bottom:10px">📊 عداد 1</div>
+          <div class="meter-grid">
+            <div class="meter-box"><label class="fl">افتتاحي</label>
+              <input class="fi" type="number" step="0.01" id="p${pump.id}-m1-open" value="${m1_open}" oninput="calcPump(${pump.id})" placeholder="0.00"></div>
+            <div class="meter-box"><label class="fl">ختامي</label>
+              <input class="fi" type="number" step="0.01" id="p${pump.id}-m1-close" value="${m1_close}" oninput="calcPump(${pump.id})" placeholder="0.00"></div>
+            <div class="meter-box"><label class="fl">الناتج (لتر)</label>
+              <input class="fi" type="number" id="p${pump.id}-m1-qty" readonly placeholder="0.00"></div>
+            <div class="meter-box"><label class="fl">المبلغ (دينار)</label>
+              <input class="fi" type="number" id="p${pump.id}-m1-amt" readonly placeholder="0"></div>
+          </div>
+        </div>
+        <div style="border:1.5px solid ${prod.color}33;border-radius:12px;padding:12px;background:${prod.color}06">
+          <div style="font-size:12px;font-weight:700;color:${prod.color};margin-bottom:10px">📊 عداد 2</div>
+          <div class="meter-grid">
+            <div class="meter-box"><label class="fl">افتتاحي</label>
+              <input class="fi" type="number" step="0.01" id="p${pump.id}-m2-open" value="${m2_open}" oninput="calcPump(${pump.id})" placeholder="0.00"></div>
+            <div class="meter-box"><label class="fl">ختامي</label>
+              <input class="fi" type="number" step="0.01" id="p${pump.id}-m2-close" value="${m2_close}" oninput="calcPump(${pump.id})" placeholder="0.00"></div>
+            <div class="meter-box"><label class="fl">الناتج (لتر)</label>
+              <input class="fi" type="number" id="p${pump.id}-m2-qty" readonly placeholder="0.00"></div>
+            <div class="meter-box"><label class="fl">المبلغ (دينار)</label>
+              <input class="fi" type="number" id="p${pump.id}-m2-amt" readonly placeholder="0"></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+    });
+  });
+
+  container.innerHTML = html;
+  activePumps.forEach(p => calcPump(p.id));
+}
+
+function calcPump(pumpId) {
+  const pump = CFG.pumps?.find(p => p.id === pumpId);
+  if (!pump) return;
+  const price = CFG.prices?.[pump.product] || 0;
+
+  const get = id => parseFloat(document.getElementById(id)?.value) || 0;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+
+  // Meter 1
+  const m1o = get(`p${pumpId}-m1-open`), m1c = get(`p${pumpId}-m1-close`);
+  const m1qty = Math.max(0, m1c - m1o);
+  const m1amt = Math.round(m1qty * price);
+  set(`p${pumpId}-m1-qty`, m1qty.toFixed(3));
+  set(`p${pumpId}-m1-amt`, m1amt);
+
+  // Meter 2
+  const m2o = get(`p${pumpId}-m2-open`), m2c = get(`p${pumpId}-m2-close`);
+  const m2qty = Math.max(0, m2c - m2o);
+  const m2amt = Math.round(m2qty * price);
+  set(`p${pumpId}-m2-qty`, m2qty.toFixed(3));
+  set(`p${pumpId}-m2-amt`, m2amt);
+
+  const totalAmt = m1amt + m2amt;
+  const el = document.getElementById(`pump-total-${pumpId}`);
+  if (el) el.textContent = totalAmt.toLocaleString();
+
+  // Store
+  dayData.pumps[pumpId] = {
+    id: pumpId, product: pump.product,
+    meter1: {opening: m1o, closing: m1c, qty: m1qty, amount: m1amt},
+    meter2: {opening: m2o, closing: m2c, qty: m2qty, amount: m2amt},
+    total: totalAmt
+  };
+
+  updateTotals();
+}
+
+function updateTotals() {
+  const totals = {};
+  PRODUCTS.forEach(p => totals[p.id] = {qty: 0, amount: 0});
+
+  Object.values(dayData.pumps).forEach(p => {
+    if (totals[p.product]) {
+      totals[p.product].qty += (p.meter1.qty || 0) + (p.meter2.qty || 0);
+      totals[p.product].amount += (p.total || 0);
+    }
+  });
+
+  dayData.totals = totals;
+  const grand = Object.values(totals).reduce((s, t) => s + t.amount, 0);
+  dayData.grand_total = grand;
+
+  document.getElementById('grand-total').textContent = grand.toLocaleString();
+  calcPayments();
+  renderProductTotals(CFG.pumps, CFG.prices, totals);
+  setTimeout(calcDailyDeductions, 100);
+}
+
+function renderProductTotals(pumps, prices, totals = null) {
+  const container = document.getElementById('product-totals');
+  container.innerHTML = PRODUCTS.map(prod => {
+    const t = totals?.[prod.id] || {qty: 0, amount: 0};
+    return `<div class="sum-card" style="border-top-color:${prod.color}">
+      <div style="font-size:11px;color:${prod.color};font-weight:700;margin-bottom:4px">${prod.name}</div>
+      <div class="sum-val" style="color:${prod.color};font-size:22px">${Math.round(t.qty).toLocaleString()}</div>
+      <div class="sum-lbl">لتر</div>
+      <div class="sum-sub" style="color:${prod.color};font-weight:700">${t.amount.toLocaleString()} دينار</div>
+    </div>`;
+  }).join('');
+}
+
+// ── AUTO FILL OPENING ──
+async function autoFillOpening() {
+  if (!confirm('هل تريد نقل الأرقام الختامية كأرقام افتتاحية لجميع المضخات؟')) return;
+  const activePumps = CFG.pumps?.filter(p => p.active) || [];
+  activePumps.forEach(pump => {
+    const closing1 = document.getElementById(`p${pump.id}-m1-close`)?.value;
+    const closing2 = document.getElementById(`p${pump.id}-m2-close`)?.value;
+    if (closing1) { const el = document.getElementById(`p${pump.id}-m1-open`); if (el) el.value = closing1; }
+    if (closing2) { const el = document.getElementById(`p${pump.id}-m2-open`); if (el) el.value = closing2; }
+    calcPump(pump.id);
+  });
+  toast('تم نقل الأرقام الختامية كافتتاحية ✅');
+}
+
+// ── SAVE DAY ──
+async function saveDay() {
+  const btn = document.getElementById('btn-save-day-main');
+  if(btn){ btn.style.transform='scale(0.98)'; btn.style.boxShadow='0 4px 16px rgba(22,163,74,.3)'; }
+  setTimeout(()=>{ if(btn){ btn.style.transform=''; btn.style.boxShadow='0 8px 32px rgba(22,163,74,.4)'; } },200);
+  const today = new Date().toISOString().split('T')[0];
+  dayData.notes = document.getElementById('day-notes').value;
+  dayData.date = today;
+  dayData.pumps = Object.values(dayData.pumps);
+  calcGasoilDist();
+  calcDailyDeductions(); // حفظ الاستقطاعات
+  try {
+    await api('POST', '/api/save-day', dayData);
+    toast('تم حفظ اليوم بنجاح ✅');
+  } catch(e) { toast('خطأ: ' + e.message, 'err'); }
+}
+
+// ── TANK ──
+function renderTankForm(inventory, prices) {
+  document.getElementById('tank-form').innerHTML = PRODUCTS.map(prod => `
+    <div style="margin-bottom:14px;padding:12px;border:1.5px solid ${prod.color}33;border-radius:10px;background:${prod.color}06">
+      <label class="fl" style="color:${prod.color}">${prod.name}</label>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center">
+        <input class="fi" type="number" step="0.01" id="tank-${prod.id}"
+          value="${inventory[prod.id] || 0}" placeholder="0.00">
+        <span style="font-size:12px;color:var(--t3);white-space:nowrap">لتر</span>
+      </div>
+    </div>`).join('');
+}
+
+async function saveTank() {
+  const inventory = {};
+  PRODUCTS.forEach(p => { inventory[p.id] = parseFloat(document.getElementById('tank-' + p.id)?.value) || 0; });
+  try { await api('POST', '/api/tank', {inventory}); toast('تم حفظ المخزون ✅'); }
+  catch(e) { toast('خطأ: ' + e.message, 'err'); }
+}
+
+// ── PRICES ──
+function renderPricesForm(prices) {
+  document.getElementById('prices-form').innerHTML = PRODUCTS.map(prod => `
+    <div style="border:1.5px solid ${prod.color}33;border-radius:10px;padding:12px;background:${prod.color}06">
+      <label class="fl" style="color:${prod.color}">${prod.name}</label>
+      <input class="fi" type="number" id="price-${prod.id}" value="${prices[prod.id] || 0}" placeholder="0">
+      <div style="font-size:10px;color:var(--t3);margin-top:4px">دينار / لتر</div>
+    </div>`).join('');
+}
+
+async function savePrices() {
+  const prices = {};
+  PRODUCTS.forEach(p => { prices[p.id] = parseInt(document.getElementById('price-' + p.id)?.value) || 0; });
+  try {
+    await api('POST', '/api/prices', {prices});
+    CFG.prices = prices;
+    toast('تم حفظ الأسعار ✅');
+    // Recalc all pumps
+    (CFG.pumps || []).filter(p => p.active).forEach(p => calcPump(p.id));
+  } catch(e) { toast('خطأ: ' + e.message, 'err'); }
+}
+
+// ── SALES SUMMARY ──
+function renderSalesSummary() {
+  const totals = {};
+  PRODUCTS.forEach(p => totals[p.id] = {qty: 0, amount: 0});
+  records.forEach(rec => {
+    (rec.pumps || []).forEach(p => {
+      if (totals[p.product]) {
+        totals[p.product].qty += (p.meter1?.qty || 0) + (p.meter2?.qty || 0);
+        totals[p.product].amount += (p.total || 0);
+      }
+    });
+  });
+  document.getElementById('sales-summary').innerHTML = PRODUCTS.map(prod => {
+    const t = totals[prod.id];
+    return `<div style="margin-bottom:12px;padding:12px;border:1.5px solid ${prod.color}33;border-radius:10px;background:${prod.color}06">
+      <div style="font-weight:700;color:${prod.color};margin-bottom:6px">${prod.name}</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px">
+        <span>🛢️ ${t.qty.toFixed(0)} لتر</span>
+        <span style="font-weight:700;color:${prod.color}">${t.amount.toLocaleString()} دينار</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── HISTORY ──
+async function loadHistory() {
+  try {
+    const d = await api('GET', '/api/records');
+    records = (d.records || []).reverse();
+    renderHistory();
+  } catch(e) {}
+}
+
+function renderHistory() {
+  document.getElementById('history-tb').innerHTML = records.map((r, i) => {
+    const t = r.totals || {};
+    return `<tr>
+      <td style="text-align:center;font-size:11px;color:var(--t3)">${i + 1}</td>
+      <td style="font-weight:700">${r.date}</td>
+      <td style="text-align:center;color:#ef4444;font-weight:600">${Math.round(t.premium?.amount || 0).toLocaleString()}</td>
+      <td style="text-align:center;color:#f97316;font-weight:600">${Math.round(t.regular?.amount || 0).toLocaleString()}</td>
+      <td style="text-align:center;color:#6366f1;font-weight:600">${Math.round(t.gasoil?.amount || 0).toLocaleString()}</td>
+      <td style="text-align:center;color:#10b981;font-weight:600">${Math.round(t.kerosene?.amount || 0).toLocaleString()}</td>
+      <td style="font-weight:800;color:var(--p1)">${(r.grand_total || 0).toLocaleString()}</td>
+      <td style="font-size:11px;color:var(--t3)">${r.saved_by || '—'}</td>
+      <td style="text-align:center">
+        <div style="display:flex;gap:4px;justify-content:center">
+          <button class="btn btn-o btn-sm" onclick="showDayDetail(${r.id})" title="تفاصيل">👁️</button>
+          ${CU?.role==='admin'?`<button class="btn btn-r btn-sm" onclick="delRecord(${r.id})" title="حذف">🗑️</button>`:''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function showDayDetail(id) {
+  const r = records.find(x => x.id === id); if (!r) return;
+  document.getElementById('day-modal-title').textContent = `📋 تفاصيل يوم ${r.date}`;
+  document.getElementById('day-modal-body').innerHTML = `
+    <div style="margin-bottom:14px;background:linear-gradient(135deg,#1a5c2e,#2d8a4e);border-radius:12px;padding:14px 18px;color:#fff;text-align:center">
+      <div style="font-size:11px;opacity:.8">الإجمالي</div>
+      <div style="font-size:30px;font-weight:900">${(r.grand_total||0).toLocaleString()} دينار</div>
+    </div>
+    ${(r.pumps||[]).map(p=>{
+      const prod=getProd(p.product);
+      return `<div style="border:1.5px solid ${prod.color}33;border-radius:10px;padding:12px;margin-bottom:10px;background:${prod.color}06">
+        <div style="font-weight:700;color:${prod.color};margin-bottom:8px">⛽ ${CFG.pumps?.find(x=>x.id===p.id)?.name||'مضخة'} — ${prod.name}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+          <div style="background:#fff;border-radius:8px;padding:8px">
+            <div style="font-weight:700;color:var(--t3);margin-bottom:4px">عداد 1</div>
+            <div>افتتاحي: <strong>${p.meter1?.opening||0}</strong></div>
+            <div>ختامي: <strong>${p.meter1?.closing||0}</strong></div>
+            <div>الناتج: <strong>${(p.meter1?.qty||0).toFixed(3)} لتر</strong></div>
+            <div style="color:${prod.color};font-weight:700">${(p.meter1?.amount||0).toLocaleString()} دينار</div>
+          </div>
+          <div style="background:#fff;border-radius:8px;padding:8px">
+            <div style="font-weight:700;color:var(--t3);margin-bottom:4px">عداد 2</div>
+            <div>افتتاحي: <strong>${p.meter2?.opening||0}</strong></div>
+            <div>ختامي: <strong>${p.meter2?.closing||0}</strong></div>
+            <div>الناتج: <strong>${(p.meter2?.qty||0).toFixed(3)} لتر</strong></div>
+            <div style="color:${prod.color};font-weight:700">${(p.meter2?.amount||0).toLocaleString()} دينار</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;text-align:center;font-weight:800;color:${prod.color}">إجمالي المضخة: ${(p.total||0).toLocaleString()} دينار</div>
+      </div>`;
+    }).join('')}
+    ${r.notes?`<div style="background:var(--bg2);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--t2)">📝 ${r.notes}</div>`:''}
+  `;
+  document.getElementById('ov-day').classList.add('open');
+}
+
+async function delRecord(id) {
+  if (!confirm('حذف هذا السجل؟')) return;
+  try {
+    await api('DELETE', `/api/records/${id}`);
+    toast('تم الحذف');
+    await loadHistory();
+  } catch(e) { toast('خطأ', 'err'); }
+}
+
+function exportHistory() {
+  const rows = [['التاريخ','بنزين محسن (دينار)','بنزين عادي (دينار)','زيت الغاز (دينار)','نفط أبيض (دينار)','الإجمالي','حفظ بواسطة']];
+  records.forEach(r => {
+    const t = r.totals || {};
+    rows.push([r.date,Math.round(t.premium?.amount||0),Math.round(t.regular?.amount||0),Math.round(t.gasoil?.amount||0),Math.round(t.kerosene?.amount||0),r.grand_total||0,r.saved_by||'']);
+  });
+  const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = 'اليوميات.csv'; a.click();
+  toast('تم التصدير ✅');
+}
+
+// ── SETTINGS ──
+function renderPumpsSettings(pumps) {
+  document.getElementById('pumps-settings').innerHTML = pumps.map(p => {
+    const prod = getProd(p.product);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:${p.active?'#fff':'#fafafa'}">
+      <div>
+        <div style="font-weight:700;font-size:13px">${p.name}</div>
+        <span class="prod-badge" style="background:${prod.color}18;color:${prod.color};border-color:${prod.color}44;font-size:10px;margin-top:3px;display:inline-flex">${prod.name}</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:11px;color:${p.active?'var(--a3)':'var(--t3)'}">${p.active?'نشطة':'معطلة'}</span>
+        <button class="btn btn-o btn-sm" onclick="togglePump(${p.id},${!p.active})">${p.active?'تعطيل':'تفعيل'}</button>
+        <button class="btn btn-r btn-sm" onclick="delPump(${p.id})">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddPump() {
+  document.getElementById('pump-eid').value = '';
+  document.getElementById('pump-name').value = '';
+  document.getElementById('pump-product').value = 'regular';
+  document.getElementById('ov-pump').classList.add('open');
+}
+
+async function savePump() {
+  const name = document.getElementById('pump-name').value.trim();
+  const product = document.getElementById('pump-product').value;
+  if (!name) { toast('اسم المضخة مطلوب', 'err'); return; }
+  try {
+    await api('POST', '/api/pumps', {name, product});
+    toast('تمت الإضافة ✅');
+    closeModal('ov-pump');
+    const cfg = await api('GET', '/api/config');
+    CFG = cfg;
+    renderPumpsSettings(cfg.pumps);
+  } catch(e) { toast('خطأ: ' + e.message, 'err'); }
+}
+
+async function togglePump(id, active) {
+  try {
+    await api('PUT', `/api/pumps/${id}`, {active});
+    const cfg = await api('GET', '/api/config');
+    CFG = cfg;
+    renderPumpsSettings(cfg.pumps);
+    toast(active ? 'تم تفعيل المضخة' : 'تم تعطيل المضخة');
+  } catch(e) { toast('خطأ', 'err'); }
+}
+
+async function delPump(id) {
+  if (!confirm('حذف هذه المضخة؟')) return;
+  try {
+    await api('DELETE', `/api/pumps/${id}`);
+    const cfg = await api('GET', '/api/config');
+    CFG = cfg;
+    renderPumpsSettings(cfg.pumps);
+    toast('تم الحذف');
+  } catch(e) { toast('خطأ', 'err'); }
+}
+
+async function saveStation() {
+  const station = {
+    name: document.getElementById('s-name').value.trim(),
+    owner: document.getElementById('s-owner').value.trim(),
+    location: document.getElementById('s-location').value.trim(),
+  };
+  try {
+    await api('POST', '/api/station', {station});
+    document.getElementById('h-station-name').textContent = station.name || 'إدارة المحطة';
+    toast('تم الحفظ ✅');
+  } catch(e) { toast('خطأ', 'err'); }
+}
+
+
+
+function updateGasoilPrice(pumpId){
+  calcPump(pumpId);
+}
+
+function editGasoilPrices(){
+  document.getElementById('ov-gasoil-prices').classList.add('open');
+  GASOIL_PRICE_TYPES.forEach(t=>{
+    const el=document.getElementById('gp-'+t.key);
+    if(el) el.value=CFG.prices?.[t.key]||0;
+  });
+}
+
+async function saveGasoilPrices(){
+  GASOIL_PRICE_TYPES.forEach(t=>{
+    const el=document.getElementById('gp-'+t.key);
+    if(el&&CFG.prices) CFG.prices[t.key]=parseInt(el.value)||0;
+  });
+  // Set default gasoil price to electronic
+  if(CFG.prices) CFG.prices['gasoil']=CFG.prices['gasoil_electronic']||0;
+  try{
+    await api('POST','/api/prices',{prices:CFG.prices});
+    // Recalc all gasoil pumps
+    (CFG.pumps||[]).filter(p=>p.product==='gasoil'&&p.active).forEach(p=>calcPump(p.id));
+    toast('تم حفظ أسعار زيت الغاز ✅');
+    closeModal('ov-gasoil-prices');
+  }catch(e){toast('خطأ: '+e.message,'err');}
+}
+
+
+
+// ── PAYMENTS ──
+function addPosEntry(){
+  const cont=document.getElementById('pos-entries');
+  const div=document.createElement('div');
+  div.style.cssText='display:flex;gap:8px;align-items:center';
+  div.innerHTML=`<input type="number" class="pos-entry fi" placeholder="المبلغ بالدينار" oninput="calcPayments()"
+    style="flex:1;border-color:#0369a133;text-align:center;font-size:14px;font-weight:700;color:#0369a1">
+    <input type="text" class="pos-note fi" placeholder="ملاحظة" style="flex:1;font-size:12px;border-color:#0369a133">
+    <button onclick="this.parentElement.remove();calcPayments()" style="background:#dc262614;border:none;border-radius:6px;padding:6px 8px;cursor:pointer;color:#dc2626">✕</button>`;
+  cont.appendChild(div);
+}
+function addChequeEntry(){
+  const cont=document.getElementById('cheque-entries');
+  const div=document.createElement('div');
+  div.style.cssText='display:flex;gap:8px;align-items:center';
+  div.innerHTML=`<input type="number" class="cheque-entry fi" placeholder="مبلغ الصك" oninput="calcPayments()"
+    style="flex:1;border-color:#7c3aed33;text-align:center;font-size:14px;font-weight:700;color:#7c3aed">
+    <input type="text" class="cheque-note fi" placeholder="رقم الصك / البنك" style="flex:1;font-size:12px;border-color:#7c3aed33">
+    <button onclick="this.parentElement.remove();calcPayments()" style="background:#dc262614;border:none;border-radius:6px;padding:6px 8px;cursor:pointer;color:#dc2626">✕</button>`;
+  cont.appendChild(div);
+}
+function calcPayments(){
+  const posTotal=[...document.querySelectorAll('.pos-entry')].reduce((s,el)=>s+(parseFloat(el.value)||0),0);
+  const chequeTotal=[...document.querySelectorAll('.cheque-entry')].reduce((s,el)=>s+(parseFloat(el.value)||0),0);
+  const electronic=posTotal+chequeTotal;
+  const grand=dayData.grand_total||0;
+  const cash=Math.max(0,grand-electronic);
+  document.getElementById('pos-total').textContent=posTotal.toLocaleString();
+  document.getElementById('cheque-total').textContent=chequeTotal.toLocaleString();
+  document.getElementById('pay-cash').textContent=cash.toLocaleString();
+  document.getElementById('pay-electronic').textContent=electronic.toLocaleString();
+  // Update all pay-grand spans
+  document.querySelectorAll('#pay-grand').forEach(el=>el.textContent=grand.toLocaleString());
+  // Diff check
+  const diffEl=document.getElementById('pay-diff');
+  if(diffEl){
+    if(electronic>grand){
+      diffEl.style.display='block';diffEl.style.background='rgba(220,38,38,.08)';
+      diffEl.style.color='#dc2626';diffEl.style.border='1.5px solid rgba(220,38,38,.2)';
+      diffEl.textContent=`⚠️ مجموع POS والصكوك (${electronic.toLocaleString()}) أكبر من الإجمالي (${grand.toLocaleString()})`;
+    }else{diffEl.style.display='none';}
+  }
+  // Store
+  dayData.payments={pos:posTotal,cheque:chequeTotal,cash,total:grand};
+}
+
+
+// ── DAILY DEDUCTIONS ──
+function calcDailyDeductions(){
+  const gross = dayData.grand_total || 0;
+  let totalDed = 0;
+
+  // Helper: get qty for product
+  const getProdQty = (prod) =>
+    Object.values(dayData.pumps||{}).filter(p=>p.product===prod)
+      .reduce((s,p)=>s+(p.meter1?.qty||0)+(p.meter2?.qty||0), 0);
+
+  const getProdAmt = (prod) =>
+    Object.values(dayData.pumps||{}).filter(p=>p.product===prod)
+      .reduce((s,p)=>s+(p.total||0), 0);
+
+  // Per product (بنزين محسن / عادي / نفط أبيض)
+  ['premium','regular','kerosene'].forEach(prod=>{
+    const qty = getProdQty(prod);
+    const amt = getProdAmt(prod);
+    const ratePerLiter = parseFloat(document.getElementById('daily-ded-'+prod)?.value)||0;
+    const dedAmt = Math.round(qty * ratePerLiter);
+    const net = amt - dedAmt;
+
+    const qtyEl = document.getElementById('daily-qty-'+prod);
+    const dedAmtEl = document.getElementById('daily-ded-amt-'+prod);
+    const netEl = document.getElementById('daily-net-'+prod);
+    if(qtyEl) qtyEl.textContent = qty.toFixed(3);
+    if(dedAmtEl) dedAmtEl.textContent = dedAmt.toLocaleString();
+    if(netEl) netEl.textContent = net.toLocaleString() + ' د';
+    totalDed += dedAmt;
+  });
+
+  // Gasoil total
+  const gasoilQty = getProdQty('gasoil');
+  const gasoilAmt = getProdAmt('gasoil');
+  const gasoilRate = parseFloat(document.getElementById('daily-ded-gasoil')?.value)||0;
+  const gasoilDedAmt = Math.round(gasoilQty * gasoilRate);
+  const gasoilNet = gasoilAmt - gasoilDedAmt;
+
+  const gQtyEl = document.getElementById('daily-qty-gasoil');
+  const gDedEl = document.getElementById('daily-ded-amt-gasoil');
+  const gNetEl = document.getElementById('daily-net-gasoil');
+  if(gQtyEl) gQtyEl.textContent = gasoilQty.toFixed(3);
+  if(gDedEl) gDedEl.textContent = gasoilDedAmt.toLocaleString();
+  if(gNetEl) gNetEl.textContent = gasoilNet.toLocaleString() + ' د';
+  totalDed += gasoilDedAmt;
+
+  // Gasoil by type
+  GASOIL_TYPES_DEF.forEach(t=>{
+    const distQty = dayData.gasoil_dist?.[t.key] || 0;
+    const price = CFG.prices?.[t.key]||0;
+    const typeAmt = t.cash ? Math.round(distQty * price) : 0;
+    const rate = parseFloat(document.getElementById('daily-ded-'+t.key)?.value)||0;
+    const typeDedAmt = Math.round(distQty * rate);
+    const typeNet = typeAmt - typeDedAmt;
+
+    const qtyEl = document.getElementById('daily-qty-'+t.key);
+    const dedAmtEl = document.getElementById('daily-ded-amt-'+t.key);
+    const netEl = document.getElementById('daily-net-'+t.key);
+    if(qtyEl) qtyEl.textContent = distQty.toFixed(3);
+    if(dedAmtEl) dedAmtEl.textContent = typeDedAmt.toLocaleString();
+    if(netEl && t.cash) netEl.textContent = typeNet.toLocaleString() + ' د';
+  });
+
+  // Summary
+  const netTotal = gross - totalDed;
+  const grossEl = document.getElementById('daily-gross-total');
+  const dedEl = document.getElementById('daily-total-ded');
+  const netEl2 = document.getElementById('daily-net-total');
+  if(grossEl) grossEl.textContent = gross.toLocaleString();
+  if(dedEl) dedEl.textContent = totalDed.toLocaleString();
+  if(netEl2) netEl2.textContent = netTotal.toLocaleString();
+
+  // Save
+  dayData.daily_deductions = {};
+  ['premium','regular','kerosene','gasoil'].forEach(prod=>{
+    dayData.daily_deductions[prod] = parseFloat(document.getElementById('daily-ded-'+prod)?.value)||0;
+  });
+  GASOIL_TYPES_DEF.forEach(t=>{
+    dayData.daily_deductions[t.key] = parseFloat(document.getElementById('daily-ded-'+t.key)?.value)||0;
+  });
+  dayData.daily_net = netTotal;
+}
+
+// ── WEEKLY REPORTS ──
+let deductions = {};
+let weeklyData = {};
+
+function setWeekRange(){
+  const now = new Date();
+  const day = now.getDay();
+  const sat = new Date(now); sat.setDate(now.getDate() - (day===6?0:(day+1)%7) );
+  const fri = new Date(sat); fri.setDate(sat.getDate()+6);
+  document.getElementById('w-from').value = sat.toISOString().split('T')[0];
+  document.getElementById('w-to').value = fri.toISOString().split('T')[0];
+  updateDaysLabel();
+}
+function setLastWeekRange(){
+  const now = new Date();
+  const day = now.getDay();
+  const thisSat = new Date(now); thisSat.setDate(now.getDate() - (day===6?0:(day+1)%7));
+  const lastSat = new Date(thisSat); lastSat.setDate(thisSat.getDate()-7);
+  const lastFri = new Date(lastSat); lastFri.setDate(lastSat.getDate()+6);
+  document.getElementById('w-from').value = lastSat.toISOString().split('T')[0];
+  document.getElementById('w-to').value = lastFri.toISOString().split('T')[0];
+  updateDaysLabel();
+}
+function updateDaysLabel(){
+  const from=document.getElementById('w-from').value;
+  const to=document.getElementById('w-to').value;
+  if(from&&to){
+    const days=Math.round((new Date(to)-new Date(from))/86400000)+1;
+    document.getElementById('w-days-lbl').textContent=`📅 ${days} يوم`;
+  }
+}
+
+async function generateWeeklyReport(){
+  const from=document.getElementById('w-from').value;
+  const to=document.getElementById('w-to').value;
+  if(!from||!to){toast('حدد الفترة الزمنية','err');return;}
+  // تأكد من تحميل البيانات
+  if(records.length===0) await loadHistory();
+  const filtered=records.filter(r=>r.date>=from&&r.date<=to);
+  if(filtered.length===0){toast('لا توجد بيانات في هذه الفترة','err');return;}
+
+  weeklyData = {from, to, records: filtered};
+
+  // Product totals
+  const totals={};
+  PRODUCTS.forEach(p=>totals[p.id]={qty:0,amount:0});
+  const gasoilByType={};
+  GASOIL_TYPES_DEF.forEach(t=>gasoilByType[t.key]={qty:0,amount:0,cash:t.cash});
+
+  filtered.forEach(r=>{
+    (r.pumps||[]).forEach(p=>{
+      const qty=(p.meter1?.qty||0)+(p.meter2?.qty||0);
+      const amt=p.total||0;
+      if(totals[p.product]){totals[p.product].qty+=qty;totals[p.product].amount+=amt;}
+    });
+    // Gasoil distribution
+    if(r.gasoil_dist){
+      GASOIL_TYPES_DEF.forEach(t=>{
+        const qty=r.gasoil_dist[t.key]||0;
+        const price=r.prices?.[t.key]||CFG.prices?.[t.key]||0;
+        gasoilByType[t.key].qty+=qty;
+        if(t.cash) gasoilByType[t.key].amount+=Math.round(qty*price);
+      });
+    }
+  });
+
+  weeklyData.totals=totals;
+  weeklyData.gasoilByType=gasoilByType;
+
+  // حساب إجمالي الاستقطاعات من كل يوم
+  const weekDed = {};
+  ['premium','regular','kerosene','gasoil'].forEach(p=>weekDed[p]={rateSum:0,amtTotal:0,days:0});
+  GASOIL_TYPES_DEF.forEach(t=>weekDed[t.key]={rateSum:0,amtTotal:0,days:0});
+
+  filtered.forEach(r=>{
+    const dd=r.daily_deductions||{};
+    ['premium','regular','kerosene','gasoil'].forEach(prod=>{
+      const rate=dd[prod]||0;
+      const qty=(r.pumps||[]).filter(p=>p.product===prod).reduce((s,p)=>s+(p.meter1?.qty||0)+(p.meter2?.qty||0),0);
+      weekDed[prod].amtTotal+=Math.round(qty*rate);
+      if(rate>0) weekDed[prod].rateSum+=rate, weekDed[prod].days++;
+    });
+    GASOIL_TYPES_DEF.forEach(t=>{
+      const rate=dd[t.key]||0;
+      const qty=r.gasoil_dist?.[t.key]||0;
+      weekDed[t.key].amtTotal+=Math.round(qty*rate);
+      if(rate>0) weekDed[t.key].rateSum+=rate, weekDed[t.key].days++;
+    });
+  });
+  weeklyData.weekDed=weekDed;
+
+  // Render product summary
+  const prodSum=document.getElementById('w-product-summary');
+  if(prodSum) prodSum.innerHTML=PRODUCTS.map(p=>`
+    <div style="border:1.5px solid ${p.color}33;border-radius:12px;padding:14px;background:${p.color}06;text-align:center">
+      <div style="font-size:12px;font-weight:700;color:${p.color};margin-bottom:8px">${p.name}</div>
+      <div style="font-size:26px;font-weight:900;color:${p.color}">${totals[p.id].qty.toFixed(0).toLocaleString()}</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:4px">لتر</div>
+      <div style="font-size:13px;font-weight:700;color:${p.color}">${totals[p.id].amount.toLocaleString()}</div>
+      <div style="font-size:10px;color:var(--t3)">دينار</div>
+    </div>`).join('');
+
+  // Render gasoil breakdown
+  const gasoilBreak=document.getElementById('w-gasoil-breakdown');
+  if(gasoilBreak) gasoilBreak.innerHTML=GASOIL_TYPES_DEF.map(t=>`
+    <div style="border:1.5px solid ${t.color}33;border-radius:12px;padding:12px;background:${t.color}06;text-align:center">
+      <div style="font-size:11px;font-weight:700;color:${t.color};margin-bottom:6px">${t.icon} ${t.name}</div>
+      ${!t.cash?`<div style="font-size:9px;background:${t.color}18;color:${t.color};border-radius:6px;padding:2px 6px;margin-bottom:6px">بدون نقد</div>`:''}
+      <div style="font-size:22px;font-weight:900;color:${t.color}">${gasoilByType[t.key].qty.toFixed(0)}</div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:4px">لتر</div>
+      ${t.cash?`<div style="font-size:12px;font-weight:700;color:${t.color}">${gasoilByType[t.key].amount.toLocaleString()} دينار</div>`:'<div style="font-size:11px;color:var(--t3)">—</div>'}
+    </div>`).join('');
+
+  // Gasoil totals
+  const cashTotal=GASOIL_TYPES_DEF.filter(t=>t.cash).reduce((s,t)=>s+gasoilByType[t.key].amount,0);
+  const deferQty=GASOIL_TYPES_DEF.filter(t=>!t.cash).reduce((s,t)=>s+gasoilByType[t.key].qty,0);
+  const totalQty=GASOIL_TYPES_DEF.reduce((s,t)=>s+gasoilByType[t.key].qty,0);
+  const gasoilTotals=document.getElementById('w-gasoil-totals');
+  if(gasoilTotals) gasoilTotals.innerHTML=`
+    <div style="background:rgba(99,102,241,.08);border:1.5px solid rgba(99,102,241,.2);border-radius:12px;padding:14px;text-align:center">
+      <div style="font-size:11px;color:#6366f1;font-weight:700">💵 إجمالي النقدي</div>
+      <div style="font-size:24px;font-weight:900;color:#6366f1;margin:6px 0">${cashTotal.toLocaleString()}</div>
+      <div style="font-size:10px;color:var(--t3)">دينار</div>
+    </div>
+    <div style="background:rgba(217,119,6,.08);border:1.5px solid rgba(217,119,6,.2);border-radius:12px;padding:14px;text-align:center">
+      <div style="font-size:11px;color:var(--warn);font-weight:700">📋 بدون نقد (أجل+9)</div>
+      <div style="font-size:24px;font-weight:900;color:var(--warn);margin:6px 0">${deferQty.toFixed(0)}</div>
+      <div style="font-size:10px;color:var(--t3)">لتر</div>
+    </div>
+    <div style="background:var(--p1d);border:1.5px solid rgba(26,92,46,.2);border-radius:12px;padding:14px;text-align:center">
+      <div style="font-size:11px;color:var(--p1);font-weight:700">📊 إجمالي الكمية</div>
+      <div style="font-size:24px;font-weight:900;color:var(--p1);margin:6px 0">${totalQty.toFixed(0)}</div>
+      <div style="font-size:10px;color:var(--t3)">لتر</div>
+    </div>`;
+
+  // Payment report
+  renderPaymentReport(totals, gasoilByType);
+
+  // Daily table
+  const tb=document.getElementById('w-daily-tb');
+  if(tb) tb.innerHTML=filtered.map((r,i)=>{
+    const t=r.totals||{};
+    return `<tr>
+      <td style="text-align:center;font-size:11px;color:var(--t3)">${i+1}</td>
+      <td style="font-weight:700">${r.date}</td>
+      <td style="text-align:center;color:#ef4444">${(totals.premium?.qty||0).toFixed===undefined?'—':((r.pumps||[]).filter(p=>p.product==='premium').reduce((s,p)=>s+(p.meter1?.qty||0)+(p.meter2?.qty||0),0)).toFixed(0)}</td>
+      <td style="text-align:center;color:#f97316">${((r.pumps||[]).filter(p=>p.product==='regular').reduce((s,p)=>s+(p.meter1?.qty||0)+(p.meter2?.qty||0),0)).toFixed(0)}</td>
+      <td style="text-align:center;color:#6366f1">${((r.pumps||[]).filter(p=>p.product==='gasoil').reduce((s,p)=>s+(p.meter1?.qty||0)+(p.meter2?.qty||0),0)).toFixed(0)}</td>
+      <td style="text-align:center;color:#10b981">${((r.pumps||[]).filter(p=>p.product==='kerosene').reduce((s,p)=>s+(p.meter1?.qty||0)+(p.meter2?.qty||0),0)).toFixed(0)}</td>
+      <td style="font-weight:700;color:var(--p1)">${(r.grand_total||0).toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  // Foot totals
+  const foot=document.getElementById('w-daily-foot');
+  const grandTotal=filtered.reduce((s,r)=>s+(r.grand_total||0),0);
+  if(foot) foot.innerHTML=`<tr style="background:linear-gradient(135deg,#1a5c2e,#2d8a4e)">
+    <td colspan="2" style="padding:10px 13px;color:#fff;font-weight:800;font-size:13px">الإجمالي الكلي</td>
+    <td style="text-align:center;color:#fca5a5;font-weight:700">${totals.premium.qty.toFixed(0)}</td>
+    <td style="text-align:center;color:#fde68a;font-weight:700">${totals.regular.qty.toFixed(0)}</td>
+    <td style="text-align:center;color:#c7d2fe;font-weight:700">${totals.gasoil.qty.toFixed(0)}</td>
+    <td style="text-align:center;color:#a7f3d0;font-weight:700">${totals.kerosene.qty.toFixed(0)}</td>
+    <td style="color:#fff;font-weight:900;font-size:14px">${grandTotal.toLocaleString()}</td>
+  </tr>`;
+
+  toast('تم توليد التقرير ✅');
+}
+
+function renderPaymentReport(totals, gasoilByType){
+  const el=document.getElementById('w-payment-report');if(!el)return;
+  const wd=weeklyData.weekDed||{};
+
+  const allProducts=[
+    ...PRODUCTS.map(p=>({id:p.id,name:p.name,color:p.color,amount:totals[p.id]?.amount||0,qty:totals[p.id]?.qty||0})),
+  ];
+
+  el.innerHTML=`
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:linear-gradient(135deg,#1a5c2e,#2d8a4e)">
+        <th style="padding:10px;text-align:right;color:#fff">المنتج</th>
+        <th style="padding:10px;text-align:center;color:#fff">الكمية (ل)</th>
+        <th style="padding:10px;text-align:center;color:#fff">إجمالي المبيعات (د)</th>
+        <th style="padding:10px;text-align:center;color:#4ade80">💳 دفع إلكتروني</th>
+        <th style="padding:10px;text-align:center;color:#fde68a">📄 صكوك</th>
+        <th style="padding:10px;text-align:center;color:#fca5a5">✂️ استقطاع أرباح</th>
+        <th style="padding:10px;text-align:center;color:#fff">💰 الصافي</th>
+      </tr></thead>
+      <tbody>
+        ${allProducts.map(p=>{
+          const elec=deductions['elec_'+p.id]||0;
+          const check=deductions['check_'+p.id]||0;
+          const profitDed=(wd[p.id]?.amtTotal)||0;
+          const net=p.amount-elec-check-profitDed;
+          const avgRate=wd[p.id]?.days>0?(wd[p.id].rateSum/wd[p.id].days).toFixed(2):0;
+          return `<tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:10px;font-weight:700;color:${p.color}">${p.name}</td>
+            <td style="text-align:center">${p.qty.toFixed(0)}</td>
+            <td style="text-align:center;font-weight:700">${p.amount.toLocaleString()}</td>
+            <td style="text-align:center;color:#16a34a">${elec.toLocaleString()}</td>
+            <td style="text-align:center;color:#d97706">${check.toLocaleString()}</td>
+            <td style="text-align:center;color:#dc2626">
+              ${profitDed.toLocaleString()}
+              ${avgRate>0?`<div style="font-size:9px;color:var(--t3)">${avgRate} د/ل</div>`:''}
+            </td>
+            <td style="text-align:center;font-weight:800;color:var(--p1)">${net.toLocaleString()}</td>
+          </tr>`;
+        }).join('')}
+        <!-- Gasoil types -->
+        ${GASOIL_TYPES_DEF.filter(t=>t.cash).map(t=>{
+          const amt=gasoilByType?.[t.key]?.amount||0;
+          const qty=gasoilByType?.[t.key]?.qty||0;
+          const profitDed=(wd[t.key]?.amtTotal)||0;
+          const avgRate=wd[t.key]?.days>0?(wd[t.key].rateSum/wd[t.key].days).toFixed(2):0;
+          return `<tr style="border-bottom:1px solid var(--border);background:rgba(99,102,241,.03)">
+            <td style="padding:8px 10px;font-size:11px;color:${t.color};padding-right:24px">↳ ${t.icon} ${t.name}</td>
+            <td style="text-align:center;font-size:11px">${qty.toFixed(0)}</td>
+            <td style="text-align:center;font-size:11px">${amt.toLocaleString()}</td>
+            <td colspan="2" style="text-align:center;color:var(--t3)">—</td>
+            <td style="text-align:center;font-size:11px;color:#dc2626">
+              ${profitDed.toLocaleString()}
+              ${avgRate>0?`<div style="font-size:9px;color:var(--t3)">${avgRate} د/ل</div>`:''}
+            </td>
+            <td style="text-align:center;font-size:11px;font-weight:700;color:${t.color}">${(amt-profitDed).toLocaleString()}</td>
+          </tr>`;
+        }).join('')}
+        ${GASOIL_TYPES_DEF.filter(t=>!t.cash).map(t=>{
+          const qty=gasoilByType?.[t.key]?.qty||0;
+          const profitDed=(wd[t.key]?.amtTotal)||0;
+          return `<tr style="border-bottom:1px solid var(--border);background:rgba(217,119,6,.03)">
+            <td style="padding:8px 10px;font-size:11px;color:${t.color};padding-right:24px">↳ ${t.icon} ${t.name} <span style="font-size:9px">(بدون نقد)</span></td>
+            <td style="text-align:center;font-size:11px">${qty.toFixed(0)}</td>
+            <td style="text-align:center;color:var(--t3)">—</td>
+            <td colspan="2" style="text-align:center;color:var(--t3)">—</td>
+            <td style="text-align:center;font-size:11px;color:#dc2626">${profitDed.toLocaleString()}</td>
+            <td style="text-align:center;color:var(--t3)">—</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--bg2);font-weight:800">
+          <td style="padding:10px">الإجمالي</td>
+          <td style="text-align:center">${allProducts.reduce((s,p)=>s+p.qty,0).toFixed(0)}</td>
+          <td style="text-align:center">${allProducts.reduce((s,p)=>s+p.amount,0).toLocaleString()}</td>
+          <td style="text-align:center;color:#16a34a">${allProducts.reduce((s,p)=>s+(deductions['elec_'+p.id]||0),0).toLocaleString()}</td>
+          <td style="text-align:center;color:#d97706">${allProducts.reduce((s,p)=>s+(deductions['check_'+p.id]||0),0).toLocaleString()}</td>
+          <td style="text-align:center;color:#dc2626">${Object.values(wd).reduce((s,v)=>s+(v.amtTotal||0),0).toLocaleString()}</td>
+          <td style="text-align:center;color:var(--p1)">${(allProducts.reduce((s,p)=>s+p.amount,0)-allProducts.reduce((s,p)=>s+(deductions['elec_'+p.id]||0)+(deductions['check_'+p.id]||0),0)-Object.values(wd).reduce((s,v)=>s+(v.amtTotal||0),0)).toLocaleString()}</td>
+        </tr>
+      </tfoot>
+    </table>
+    </div>`;
+}
+
+// ── DEDUCTIONS ──
+function openDeductionSettings(){
+  // Load current values
+  PRODUCTS.forEach(p=>{
+    ['elec','check','profit'].forEach(type=>{
+      const el=document.getElementById('ded-'+type+'-'+p.id);
+      if(el) el.value=deductions[type+'_'+p.id]||0;
+    });
+  });
+  GASOIL_TYPES_DEF.forEach(t=>{
+    const el=document.getElementById('ded-profit-'+t.key);
+    if(el) el.value=deductions['profit_'+t.key]||0;
+  });
+  ['elec','check'].forEach(type=>{
+    const el=document.getElementById('ded-'+type+'-gasoil');
+    if(el) el.value=deductions[type+'_gasoil']||0;
+  });
+  document.getElementById('ov-deduction').classList.add('open');
+}
+function saveDeductions(){
+  PRODUCTS.forEach(p=>{
+    ['elec','check','profit'].forEach(type=>{
+      const el=document.getElementById('ded-'+type+'-'+p.id);
+      if(el) deductions[type+'_'+p.id]=parseInt(el.value)||0;
+    });
+  });
+  GASOIL_TYPES_DEF.forEach(t=>{
+    const el=document.getElementById('ded-profit-'+t.key);
+    if(el) deductions['profit_'+t.key]=parseInt(el.value)||0;
+  });
+  ['elec','check'].forEach(type=>{
+    const el=document.getElementById('ded-'+type+'-gasoil');
+    if(el) deductions[type+'_gasoil']=parseInt(el.value)||0;
+  });
+  localStorage.setItem('station_deductions',JSON.stringify(deductions));
+  closeModal('ov-deduction');
+  toast('تم حفظ الاستقطاعات ✅');
+  if(weeklyData.totals) renderPaymentReport(weeklyData.totals, weeklyData.gasoilByType);
+}
+
+// ── EXPORT EXCEL ──
+async function exportWeeklyExcel(){
+  if(!weeklyData.records){toast('ولّد التقرير أولاً','err');return;}
+  toast('جاري تجهيز ملف Excel...');
+  try{
+    if(!window.XLSX){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        s.onload=res;s.onerror=rej;document.head.appendChild(s);
+      });
+    }
+    const wb=XLSX.utils.book_new();
+
+    // Sheet 1: Product summary
+    const sum=[
+      ['المنتج','الكمية (لتر)','المبلغ (دينار)','دفع إلكتروني','صكوك','استقطاع أرباح','الصافي'],
+      ...PRODUCTS.map(p=>{
+        const t=weeklyData.totals[p.id];
+        const elec=deductions['elec_'+p.id]||0,check=deductions['check_'+p.id]||0,profit=deductions['profit_'+p.id]||0;
+        return [p.name,t.qty.toFixed(0),t.amount,elec,check,profit,t.amount-elec-check-profit];
+      }),
+      ['الإجمالي',
+        PRODUCTS.reduce((s,p)=>s+weeklyData.totals[p.id].qty,0).toFixed(0),
+        PRODUCTS.reduce((s,p)=>s+weeklyData.totals[p.id].amount,0),'','','',
+        PRODUCTS.reduce((s,p)=>s+weeklyData.totals[p.id].amount-(deductions['elec_'+p.id]||0)-(deductions['check_'+p.id]||0)-(deductions['profit_'+p.id]||0),0)
+      ]
+    ];
+    const ws1=XLSX.utils.aoa_to_sheet(sum);
+    ws1['!cols']=[{wch:14},{wch:12},{wch:14},{wch:14},{wch:12},{wch:14},{wch:14}];
+    ws1['!sheetView']={rightToLeft:true};
+    XLSX.utils.book_append_sheet(wb,ws1,'ملخص المبيعات');
+
+    // Sheet 2: Gasoil breakdown
+    const gasoil=[
+      ['نوع البيع','الكمية (لتر)','المبلغ (دينار)','استقطاع','الصافي'],
+      ...GASOIL_TYPES_DEF.map(t=>{
+        const g=weeklyData.gasoilByType[t.key];
+        const profit=deductions['profit_'+t.key]||0;
+        return [t.name,g.qty.toFixed(0),t.cash?g.amount:'—',profit,t.cash?g.amount-profit:'—'];
+      })
+    ];
+    const ws2=XLSX.utils.aoa_to_sheet(gasoil);
+    ws2['!cols']=[{wch:16},{wch:12},{wch:14},{wch:12},{wch:14}];
+    ws2['!sheetView']={rightToLeft:true};
+    XLSX.utils.book_append_sheet(wb,ws2,'تفصيل زيت الغاز');
+
+    // Sheet 3: Daily
+    const daily=[
+      ['التاريخ','بنزين محسن (ل)','بنزين عادي (ل)','زيت الغاز (ل)','نفط أبيض (ل)','الإجمالي (د)'],
+      ...weeklyData.records.map(r=>['premium','regular','gasoil','kerosene'].reduce((row,prod)=>{
+        const qty=(r.pumps||[]).filter(p=>p.product===prod).reduce((s,p)=>s+(p.meter1?.qty||0)+(p.meter2?.qty||0),0);
+        row.push(qty.toFixed(0)); return row;
+      },[r.date]).concat([r.grand_total||0]))
+    ];
+    const ws3=XLSX.utils.aoa_to_sheet(daily);
+    ws3['!cols']=[{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:14}];
+    ws3['!sheetView']={rightToLeft:true};
+    XLSX.utils.book_append_sheet(wb,ws3,'التفاصيل اليومية');
+
+    const fname=`تقرير_${weeklyData.from}_${weeklyData.to}.xlsx`;
+    XLSX.writeFile(wb,fname);
+    toast('تم التصدير ✅');
+  }catch(e){toast('خطأ: '+e.message,'err');}
+}
+
+// ── GASOIL DISTRIBUTION ──
+const GASOIL_TYPES_DEF = [
+  {key:'gasoil_electronic', name:'رقابة إلكترونية', cash:true,  color:'#6366f1', icon:'🔵'},
+  {key:'gasoil_private',    name:'قطاع خاص',        cash:true,  color:'#8b5cf6', icon:'🏢'},
+  {key:'gasoil_generator',  name:'مولدات',           cash:true,  color:'#0369a1', icon:'⚡'},
+  {key:'gasoil_form9',      name:'استمارة 9',        cash:false, color:'#d97706', icon:'📋'},
+  {key:'gasoil_credit',     name:'الأجل',            cash:false, color:'#dc2626', icon:'🕐'},
+];
+
+function renderGasoilDistGrid(){
+  const grid = document.getElementById('gasoil-dist-grid');
+  if(!grid) return;
+  grid.innerHTML = GASOIL_TYPES_DEF.map(t=>`
+    <div style="border:1.5px solid ${t.color}33;border-radius:12px;padding:12px;background:${t.color}06">
+      <div style="font-size:11px;font-weight:700;color:${t.color};margin-bottom:6px">${t.icon} ${t.name}</div>
+      ${!t.cash?`<div style="font-size:9px;background:${t.color}18;color:${t.color};border-radius:6px;padding:2px 6px;margin-bottom:6px;text-align:center">بدون ثمن نقدي</div>`:''}
+      <div>
+        <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:3px">الكمية (لتر)</label>
+        <input type="number" step="0.01" min="0" id="gdist-${t.key}"
+          style="width:100%;background:#fff;border:1.5px solid ${t.color}44;border-radius:8px;padding:7px 8px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;color:${t.color};outline:none;text-align:center"
+          placeholder="0.000" oninput="calcGasoilDist()">
+      </div>
+      ${t.cash?`<div style="margin-top:6px;text-align:center">
+        <div style="font-size:10px;color:var(--t3)">المبلغ</div>
+        <div id="gdist-amt-${t.key}" style="font-size:13px;font-weight:800;color:${t.color}">0 دينار</div>
+      </div>`:''}
+    </div>`).join('');
+}
+
+function calcGasoilDist(){
+  let totalQty=0, cashTotal=0, deferQty=0;
+  GASOIL_TYPES_DEF.forEach(t=>{
+    const qty=parseFloat(document.getElementById('gdist-'+t.key)?.value)||0;
+    totalQty+=qty;
+    const price=CFG.prices?.[t.key]||0;
+    if(t.cash){
+      const amt=Math.round(qty*price);
+      cashTotal+=amt;
+      const amtEl=document.getElementById('gdist-amt-'+t.key);
+      if(amtEl) amtEl.textContent=amt.toLocaleString()+' دينار';
+    } else {
+      deferQty+=qty;
+    }
+  });
+  // Store in dayData
+  dayData.gasoil_dist={};
+  GASOIL_TYPES_DEF.forEach(t=>{
+    dayData.gasoil_dist[t.key]=parseFloat(document.getElementById('gdist-'+t.key)?.value)||0;
+  });
+  dayData.gasoil_cash_total=cashTotal;
+  document.getElementById('gasoil-cash-total').textContent=cashTotal.toLocaleString();
+  document.getElementById('gasoil-defer-total').textContent=deferQty.toFixed(3);
+  document.getElementById('gasoil-qty-total').textContent=totalQty.toFixed(3);
+  // Compare with pump total
+  const pumpTotal=Object.values(dayData.pumps||{})
+    .filter(p=>p.product==='gasoil')
+    .reduce((s,p)=>s+(p.meter1?.qty||0)+(p.meter2?.qty||0),0);
+  const lbl=document.getElementById('gasoil-total-lbl');
+  if(lbl) lbl.textContent=pumpTotal.toFixed(3);
+  const diff=pumpTotal-totalQty;
+  const diffEl=document.getElementById('gasoil-diff');
+  if(diffEl){
+    if(Math.abs(diff)<0.01){
+      diffEl.style.display='block';
+      diffEl.style.background='rgba(22,163,74,.1)';
+      diffEl.style.color='#16a34a';
+      diffEl.style.border='1.5px solid rgba(22,163,74,.25)';
+      diffEl.textContent='✅ الكميات متطابقة مع المضخات';
+    } else if(Math.abs(diff)>0){
+      diffEl.style.display='block';
+      diffEl.style.background='rgba(220,38,38,.08)';
+      diffEl.style.color='#dc2626';
+      diffEl.style.border='1.5px solid rgba(220,38,38,.25)';
+      diffEl.textContent=`⚠️ فرق ${Math.abs(diff).toFixed(3)} لتر ${diff>0?'(غير موزع)':'(زائد عن المضخات)'}`;
+    } else {
+      diffEl.style.display='none';
+    }
+  }
+}
+
+
+// ── USERS MANAGEMENT ──
+let allUsers = [];
+
+async function loadUsers(){
+  try{
+    const d = await api('GET','/api/users');
+    allUsers = d.users||[];
+    renderUsersList();
+  }catch(e){}
+}
+
+function renderUsersList(){
+  const el = document.getElementById('users-list'); if(!el) return;
+  el.innerHTML = allUsers.map(u => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:${u.active?'#fff':'#f9fafb'}">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;border-radius:10px;background:${u.role==='admin'?'linear-gradient(135deg,#1a5c2e,#2d8a4e)':'linear-gradient(135deg,#0369a1,#0ea5e9)'};display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff">
+          ${u.role==='admin'?'🔑':'👤'}
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:13px">${u.fullname}</div>
+          <div style="font-size:11px;color:var(--t3)">${u.username} — <span style="color:${u.role==='admin'?'var(--p1)':'#0369a1'}">${u.role==='admin'?'مدير':'محاسب'}</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:11px;color:${u.active?'var(--a3)':'var(--t3)'}">${u.active?'نشط':'معطل'}</span>
+        ${u.id!==1?`
+          <button class="btn btn-o btn-sm" onclick="editUser(${u.id})">✏️</button>
+          <button class="btn btn-o btn-sm" onclick="toggleUser(${u.id},${!u.active})">${u.active?'تعطيل':'تفعيل'}</button>
+        `:'<span style="font-size:10px;color:var(--t3)">حساب رئيسي</span>'}
+      </div>
+    </div>`).join('');
+}
+
+let selectedRole = 'user';
+function selectRole(role){
+  selectedRole = role;
+  document.getElementById('u-role').value = role;
+  ['user','admin'].forEach(r=>{
+    const el = document.getElementById('role-'+r);
+    if(el){
+      el.style.borderColor = r===role ? 'var(--p1)' : 'var(--border2)';
+      el.style.background = r===role ? 'var(--p1d)' : '#fff';
+      el.style.transform = r===role ? 'scale(1.03)' : 'scale(1)';
+    }
+  });
+  const info = document.getElementById('u-perms-info');
+  if(info){
+    if(role==='admin'){
+      info.innerHTML=`<div style="font-weight:700;color:var(--p1);margin-bottom:6px">🔑 صلاحيات المدير:</div>
+        <div style="font-size:12px;color:var(--t2);display:flex;flex-direction:column;gap:3px">
+          <div>✅ جميع الصلاحيات بدون قيود</div>
+        </div>`;
+    } else {
+      info.innerHTML=`<div style="font-weight:700;color:var(--p1);margin-bottom:8px">🔒 صلاحيات المحاسب:</div>
+        <div style="display:flex;flex-direction:column;gap:4px;color:var(--t2);font-size:12px">
+          <div>✅ إدخال الأرقام الافتتاحية والختامية</div>
+          <div>✅ حساب المبالغ اليومية</div>
+          <div>✅ حفظ اليوم وعرض التقارير</div>
+          <div>❌ إضافة/حذف المضخات</div>
+          <div>❌ تعديل الأسعار</div>
+          <div>❌ إدارة المستخدمين</div>
+        </div>`;
+    }
+  }
+}
+
+function openAddUser(){
+  document.getElementById('user-modal-title').textContent='👤 إضافة مستخدم';
+  document.getElementById('user-eid').value='';
+  document.getElementById('u-fullname').value='';
+  document.getElementById('u-username').value='';
+  document.getElementById('u-password').value='';
+  selectRole('user');
+  document.getElementById('ov-user').classList.add('open');
+}
+
+function editUser(id){
+  const u=allUsers.find(x=>x.id===id);if(!u)return;
+  document.getElementById('user-modal-title').textContent='✏️ تعديل المستخدم';
+  document.getElementById('user-eid').value=id;
+  document.getElementById('u-fullname').value=u.fullname;
+  document.getElementById('u-username').value=u.username;
+  document.getElementById('u-password').value='';
+  selectRole(u.role);
+  document.getElementById('ov-user').classList.add('open');
+}
+
+async function saveUser(){
+  const fullname=document.getElementById('u-fullname').value.trim();
+  const username=document.getElementById('u-username').value.trim();
+  const password=document.getElementById('u-password').value;
+  const role=document.getElementById('u-role').value;
+  const eid=parseInt(document.getElementById('user-eid').value);
+  if(!fullname||!username){toast('الاسم واسم المستخدم مطلوبان','err');return;}
+  if(!eid&&!password){toast('كلمة المرور مطلوبة','err');return;}
+  try{
+    const body={fullname,username,role};
+    if(password) body.password=password;
+    if(eid) await api('PUT',`/api/users/${eid}`,body);
+    else await api('POST','/api/users',body);
+    toast('تم الحفظ ✅');closeModal('ov-user');await loadUsers();
+  }catch(e){toast('خطأ: '+e.message,'err');}
+}
+
+async function toggleUser(id,active){
+  try{
+    await api('PUT',`/api/users/${id}`,{active});
+    toast(active?'تم تفعيل الحساب':'تم تعطيل الحساب');
+    await loadUsers();
+  }catch(e){toast('خطأ','err');}
+}
+
+// ── QUICK ADD PUMP ──
+let selectedProduct = '';
+function openAddPumpQuick(){
+  if(CU&&CU.role!=='admin'){toast('ليس لديك صلاحية إضافة مضخة','err');return;}
+  document.getElementById('qp-name').value='';
+  document.getElementById('qp-product').value='';
+  selectedProduct='';
+  document.querySelectorAll('.prod-select').forEach(el=>{
+    el.style.opacity='1';el.style.transform='scale(1)';
+    el.style.borderWidth='2px';
+  });
+  document.getElementById('ov-quick-pump').classList.add('open');
+}
+function selectProduct(prod){
+  selectedProduct=prod;
+  document.getElementById('qp-product').value=prod;
+  document.querySelectorAll('.prod-select').forEach(el=>{
+    const isSelected=el.dataset.prod===prod;
+    el.style.opacity=isSelected?'1':'0.5';
+    el.style.transform=isSelected?'scale(1.04)':'scale(1)';
+    el.style.borderWidth=isSelected?'3px':'2px';
+  });
+}
+async function saveQuickPump(){
+  const name=document.getElementById('qp-name').value.trim();
+  const product=document.getElementById('qp-product').value;
+  if(!name){toast('اسم المضخة مطلوب','err');return;}
+  if(!product){toast('اختر نوع المنتج','err');return;}
+  try{
+    await api('POST','/api/pumps',{name,product});
+    toast('تمت الإضافة ✅');
+    closeModal('ov-quick-pump');
+    const cfg=await api('GET','/api/config');
+    CFG=cfg;
+    const today=await api('GET','/api/today');
+    renderPumps(cfg.pumps,cfg.prices,today.today,today.yesterday);
+    renderPumpsSettings(cfg.pumps);
+  }catch(e){toast('خطأ: '+e.message,'err');}
+}
+
+// ── PRICE INLINE EDIT ──
+function editPriceInline(prodId){
+  if(CU&&CU.role!=='admin'){toast('ليس لديك صلاحية تعديل الأسعار','err');return;}
+  const prod=getProd(prodId);
+  const currentPrice=CFG.prices?.[prodId]||0;
+  document.getElementById('price-modal-title').textContent=`💲 تعديل سعر ${prod.name}`;
+  document.getElementById('price-prod-id').value=prodId;
+  document.getElementById('price-new-val').value=currentPrice;
+  document.getElementById('ov-price').classList.add('open');
+  setTimeout(()=>document.getElementById('price-new-val').focus(),200);
+}
+async function savePriceInline(){
+  const prodId=document.getElementById('price-prod-id').value;
+  const newPrice=parseInt(document.getElementById('price-new-val').value)||0;
+  if(!prodId){toast('خطأ','err');return;}
+  if(!CFG.prices) CFG.prices={};
+  CFG.prices[prodId]=newPrice;
+  try{
+    await api('POST','/api/prices',{prices:CFG.prices});
+    // Update price label in pump card
+    const lbl=document.getElementById('price-lbl-'+prodId);
+    if(lbl) lbl.textContent=newPrice.toLocaleString();
+    // Recalc pumps with this product
+    (CFG.pumps||[]).filter(p=>p.product===prodId&&p.active).forEach(p=>calcPump(p.id));
+    toast('تم تحديث السعر ✅');
+    closeModal('ov-price');
+    // Update prices form
+    const priceEl=document.getElementById('price-'+prodId);
+    if(priceEl) priceEl.value=newPrice;
+  }catch(e){toast('خطأ: '+e.message,'err');}
+}
+
+// ── INIT ──
+tryAutoLogin();
+</script>
+</body>
+</html>
