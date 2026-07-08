@@ -23,7 +23,7 @@ if USE_PG:
     import psycopg2
     from psycopg2.extras import RealDictCursor
     def get_db():
-        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+        conn = psycopg2.connect(DATABASE_URL, connect_timeout=10, cursor_factory=RealDictCursor)
         return conn
     PH = '%s'
 else:
@@ -311,11 +311,19 @@ class Handler(BaseHTTPRequestHandler):
         conn.close(); self.send_json({"ok":True})
 
 if __name__=='__main__':
-    init_db()
     print("="*50)
     print("  نظام الحضور الذكي — OPDC")
     print(f"  Port: {PORT}")
     print("="*50)
+    # تهيئة قاعدة البيانات مع retry
+    for i in range(5):
+        try:
+            init_db()
+            print("✅ قاعدة البيانات جاهزة")
+            break
+        except Exception as e:
+            print(f"⏳ انتظار قاعدة البيانات... ({i+1}/5): {e}")
+            _time.sleep(3)
     server=HTTPServer(('0.0.0.0',PORT),Handler)
     print(f"✅ Running on port {PORT}")
     try: server.serve_forever()
