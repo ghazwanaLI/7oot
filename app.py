@@ -1,102 +1,95 @@
 """
-نظام الحضور الذكي — OPDC
-بدون أي مكتبات خارجية — Python فقط
+نظام الحضور الذكي — OPDC صلاح الدين
+Railway Version — يتصل بـ Agent على الشبكة المحلية
 """
-import os, json, base64, sqlite3, threading, hashlib
-import urllib.request, urllib.error, urllib.parse
+import os, json, base64, threading
+import urllib.request, urllib.error
 from datetime import datetime, timedelta, date
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from urllib.request import Request, urlopen
-import time as _time, webbrowser
+import sqlite3, time as _time
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "attendance.db")
-ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-PORT = 5000
+PORT          = int(os.getenv('PORT', 5000))
+ANTHROPIC_KEY = os.getenv('ANTHROPIC_API_KEY', '')
+AGENT_URL     = os.getenv('AGENT_URL', '')        # رابط Agent على حاسبتك
+AGENT_SECRET  = os.getenv('AGENT_SECRET', 'opdc-secret-2026')
+DATABASE_URL  = os.getenv('DATABASE_URL', '')
 
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
+# ─── قاعدة البيانات (SQLite محلي أو PostgreSQL) ───────────
+USE_PG = bool(DATABASE_URL)
+
+if USE_PG:
+    import urllib.parse as up
+    def get_db():
+        import socket
+        result = up.urlparse(DATABASE_URL)
+        import ssl
+        conn = __import__('psycopg2').connect(
+            DATABASE_URL, sslmode='require',
+            cursor_factory=__import__('psycopg2.extras', fromlist=['RealDictCursor']).RealDictCursor
+        )
+        return conn
+    PH = '%s'
+else:
+    DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'attendance.db')
+    def get_db():
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        return conn
+    PH = '?'
 
 def init_db():
-    conn = get_db()
-    conn.executescript("""
-    CREATE TABLE IF NOT EXISTS nvr_config (id INTEGER PRIMARY KEY, ip TEXT, port INTEGER DEFAULT 80, username TEXT, password TEXT);
-    CREATE TABLE IF NOT EXISTS devices (id INTEGER PRIMARY KEY, name TEXT UNIQUE, ip TEXT, port INTEGER DEFAULT 80, username TEXT DEFAULT 'admin', password TEXT, channel_no INTEGER, location TEXT);
-    CREATE TABLE IF NOT EXISTS employees (id INTEGER PRIMARY KEY, name TEXT, emp_no TEXT UNIQUE, fingerprint_no TEXT, emp_type TEXT DEFAULT 'regular', device_id INTEGER, regular_start TEXT DEFAULT '07:00', regular_end TEXT DEFAULT '13:45');
-    CREATE TABLE IF NOT EXISTS shift_schedule (id INTEGER PRIMARY KEY, employee_id INTEGER, work_date TEXT, shift_name TEXT, UNIQUE(employee_id, work_date));
-    CREATE TABLE IF NOT EXISTS attendance_log (id INTEGER PRIMARY KEY, employee_id INTEGER, employee_name TEXT, emp_no TEXT, work_date TEXT, shift_name TEXT, expected_time TEXT, actual_time TEXT, status TEXT DEFAULT 'pending', snapshot_b64 TEXT, ai_result TEXT, ai_notes TEXT, device_id INTEGER, channel_no INTEGER, created_at TEXT DEFAULT (datetime('now','localtime')), UNIQUE(employee_id, work_date, shift_name));
-    """)
+    conn = get_db(); c = conn.cursor()
+    stmts = [
+        f"CREATE TABLE IF NOT EXISTS nvr_config (id {'SERIAL' if USE_PG else 'INTEGER'} PRIMARY KEY, ip TEXT, port INTEGER DEFAULT 80, username TEXT, password TEXT)",
+        f"CREATE TABLE IF NOT EXISTS agent_config (id {'SERIAL' if USE_PG else 'INTEGER'} PRIMARY KEY, url TEXT, secret TEXT)",
+        f"CREATE TABLE IF NOT EXISTS devices (id {'SERIAL' if USE_PG else 'INTEGER'} PRIMARY KEY, name TEXT UNIQUE, ip TEXT, port INTEGER DEFAULT 80, username TEXT DEFAULT 'admin', password TEXT, channel_no INTEGER, location TEXT)",
+        f"CREATE TABLE IF NOT EXISTS employees (id {'SERIAL' if USE_PG else 'INTEGER'} PRIMARY KEY, name TEXT, emp_no TEXT UNIQUE, fingerprint_no TEXT, emp_type TEXT DEFAULT 'regular', device_id INTEGER, regular_start TEXT DEFAULT '07:00', regular_end TEXT DEFAULT '13:45')",
+        f"CREATE TABLE IF NOT EXISTS shift_schedule (id {'SERIAL' if USE_PG else 'INTEGER'} PRIMARY KEY, employee_id INTEGER, work_date {'DATE' if USE_PG else 'TEXT'}, shift_name TEXT, UNIQUE(employee_id, work_date))",
+        f"CREATE TABLE IF NOT EXISTS attendance_log (id {'SERIAL' if USE_PG else 'INTEGER'} PRIMARY KEY, employee_id INTEGER, employee_name TEXT, emp_no TEXT, work_date {'DATE' if USE_PG else 'TEXT'}, shift_name TEXT, expected_time TEXT, actual_time TEXT, status TEXT DEFAULT 'pending', snapshot_b64 TEXT, ai_result TEXT, ai_notes TEXT, device_id INTEGER, channel_no INTEGER, created_at TIMESTAMP DEFAULT {'NOW()' if USE_PG else \"(datetime('now','localtime'))\"}, UNIQUE(employee_id, work_date, shift_name))",
+    ]
+    for s in stmts:
+        c.execute(s)
     conn.commit(); conn.close()
 
-def http_req(url, username, password, method='GET', body=None):
-    headers = {'Content-Type': 'application/json'} if body else {}
-    # Basic auth
-    creds = base64.b64encode(f"{username}:{password}".encode()).decode()
-    headers['Authorization'] = f'Basic {creds}'
-    req = Request(url, data=body, headers=headers, method=method)
+# ─── Agent اتصال ──────────────────────────────────────────
+def agent_get(path, params={}):
+    conn = get_db()
+    ag = conn.execute(f"SELECT * FROM agent_config LIMIT 1").fetchone()
+    conn.close()
+    url = (dict(ag)['url'] if ag else AGENT_URL).rstrip('/')
+    if not url: return None, "Agent غير مُعدّ"
+    secret = dict(ag)['secret'] if ag else AGENT_SECRET
+    qs = '&'.join(f"{k}={v}" for k,v in params.items())
+    full = f"{url}{path}?{qs}" if qs else f"{url}{path}"
+    req = Request(full, headers={'X-Agent-Secret': secret})
     try:
-        resp = urlopen(req, timeout=10)
-        return resp.read(), 200
-    except urllib.error.HTTPError as e:
-        # Digest auth
-        www = e.headers.get('WWW-Authenticate', '')
-        if 'Digest' not in www:
-            return None, e.code
-        def pparse(h):
-            d = {}
-            for p in h.replace('Digest ','').split(','):
-                p = p.strip()
-                if '=' in p:
-                    k,v = p.split('=',1)
-                    d[k.strip()] = v.strip().strip('"')
-            return d
-        pr = pparse(www)
-        realm = pr.get('realm',''); nonce = pr.get('nonce',''); qop = pr.get('qop','')
-        ha1 = hashlib.md5(f"{username}:{realm}:{password}".encode()).hexdigest()
-        uri = '/' + '/'.join(url.split('/')[3:])
-        ha2 = hashlib.md5(f"{method}:{uri}".encode()).hexdigest()
-        if qop:
-            nc='00000001'; cnonce=hashlib.md5(str(_time.time()).encode()).hexdigest()[:8]
-            rh = hashlib.md5(f"{ha1}:{nonce}:{nc}:{cnonce}:{qop}:{ha2}".encode()).hexdigest()
-            auth = f'Digest username="{username}",realm="{realm}",nonce="{nonce}",uri="{uri}",qop={qop},nc={nc},cnonce="{cnonce}",response="{rh}"'
-        else:
-            rh = hashlib.md5(f"{ha1}:{nonce}:{ha2}".encode()).hexdigest()
-            auth = f'Digest username="{username}",realm="{realm}",nonce="{nonce}",uri="{uri}",response="{rh}"'
-        headers['Authorization'] = auth
-        req2 = Request(url, data=body, headers=headers, method=method)
-        try:
-            resp2 = urlopen(req2, timeout=10)
-            return resp2.read(), 200
-        except urllib.error.HTTPError as e2:
-            return None, e2.code
+        resp = urlopen(req, timeout=15)
+        return json.loads(resp.read()), None
     except Exception as e:
         return None, str(e)
 
-def fetch_face_events(ip, port, username, password, start_dt, end_dt):
-    url = f"http://{ip}:{port}/ISAPI/AccessControl/AcsEvent?format=json"
-    body = json.dumps({"AcsEventCond":{"searchID":"1","searchResultPosition":0,"maxResults":1000,"major":5,"minor":75,"startTime":start_dt.strftime("%Y-%m-%dT%H:%M:%S+03:00"),"endTime":end_dt.strftime("%Y-%m-%dT%H:%M:%S+03:00")}}).encode()
-    data, status = http_req(url, username, password, 'POST', body)
-    if data:
-        try:
-            events = json.loads(data).get("AcsEvent",{}).get("InfoList",[])
-            return [str(e.get("cardNo",e.get("employeeNoString",""))) for e in events], None
-        except: pass
-    return [], f"خطأ {status}"
+def agent_post(path, data={}):
+    conn = get_db()
+    ag = conn.execute(f"SELECT * FROM agent_config LIMIT 1").fetchone()
+    conn.close()
+    url = (dict(ag)['url'] if ag else AGENT_URL).rstrip('/')
+    if not url: return None, "Agent غير مُعدّ"
+    secret = dict(ag)['secret'] if ag else AGENT_SECRET
+    body = json.dumps(data).encode()
+    req = Request(f"{url}{path}", data=body, headers={'X-Agent-Secret': secret, 'Content-Type': 'application/json'}, method='POST')
+    try:
+        resp = urlopen(req, timeout=30)
+        return json.loads(resp.read()), None
+    except Exception as e:
+        return None, str(e)
 
-def fetch_snapshot(channel, snap_time=None):
-    conn = get_db(); nvr = conn.execute("SELECT * FROM nvr_config LIMIT 1").fetchone(); conn.close()
-    if not nvr: return None, "NVR غير مُعدّ"
-    url = f"http://{nvr['ip']}:{nvr['port']}/ISAPI/Streaming/channels/{channel}01/picture"
-    if snap_time: url += f"?snapTime={snap_time}"
-    data, status = http_req(url, nvr['username'], nvr['password'])
-    if data and len(data) > 500: return base64.b64encode(data).decode(), None
-    return None, f"خطأ {status}"
-
+# ─── Claude AI ────────────────────────────────────────────
 def analyze_image(b64, name, shift, time_str):
-    if not ANTHROPIC_KEY: return {"present": True, "confidence": "low", "notes": "AI غير مفعّل"}
+    if not ANTHROPIC_KEY:
+        return {"present": True, "confidence": "low", "notes": "AI غير مفعّل"}
     body = json.dumps({"model":"claude-opus-4-6","max_tokens":200,"messages":[{"role":"user","content":[{"type":"image","source":{"type":"base64","media_type":"image/jpeg","data":b64}},{"type":"text","text":f"صورة كاميرا. الموظف: {name}، وردية: {shift}، وقت: {time_str}.\nهل يظهر شخص؟ JSON فقط:\n{{\"present\":true/false,\"confidence\":\"high/medium/low\",\"notes\":\"ملاحظة\"}}"}]}]}).encode()
     req = Request("https://api.anthropic.com/v1/messages", data=body, headers={"x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","content-type":"application/json"}, method='POST')
     try:
@@ -108,33 +101,74 @@ def analyze_image(b64, name, shift, time_str):
     except Exception as ex:
         return {"present": False, "confidence": "low", "notes": str(ex)}
 
+# ─── فحص موظف ────────────────────────────────────────────
 def check_employee(emp, work_date, shift_name, expected_time):
     conn = get_db()
-    existing = conn.execute("SELECT id,status FROM attendance_log WHERE employee_id=? AND work_date=? AND shift_name=?",(emp['id'],work_date,shift_name)).fetchone()
-    if existing and existing['status'] not in ('pending','error','no_snapshot'): conn.close(); return
-    h,m = map(int, expected_time.split(':'))
-    base_dt = datetime.strptime(work_date,"%Y-%m-%d").replace(hour=h,minute=m)
-    dev = conn.execute("SELECT * FROM devices WHERE id=?",(emp['device_id'],)).fetchone() if emp.get('device_id') else None
+    existing = conn.execute(f"SELECT id,status FROM attendance_log WHERE employee_id={PH} AND work_date={PH} AND shift_name={PH}", (emp['id'],work_date,shift_name)).fetchone()
+    if existing and dict(existing)['status'] not in ('pending','error','no_snapshot'):
+        conn.close(); return
+    dev = conn.execute(f"SELECT * FROM devices WHERE id={PH}", (emp['device_id'],)).fetchone() if emp.get('device_id') else None
     conn.close()
-    fps, _ = fetch_face_events(dev['ip'],dev['port'],dev['username'],dev['password'],base_dt-timedelta(minutes=45),base_dt+timedelta(minutes=45)) if dev else ([],None)
+
+    h,m = map(int, expected_time.split(':'))
+    base_dt  = datetime.strptime(str(work_date)[:10],"%Y-%m-%d").replace(hour=h,minute=m)
+    start_dt = base_dt - timedelta(minutes=45)
+    end_dt   = base_dt + timedelta(minutes=45)
+
+    # جلب سجلات Face ID عبر Agent
+    fps = []
+    if dev:
+        r, err = agent_post('/check/device', {
+            "device": dict(dev),
+            "nvr": {},
+            "employees": [dict(emp)],
+            "shift_start": expected_time,
+            "work_date": str(work_date)[:10]
+        })
+        if r and r.get('ok'):
+            results = r.get('results', [])
+            if results and results[0].get('status') == 'ok':
+                fps = [str(emp['fingerprint_no'])]
+
     did_fp = str(emp['fingerprint_no']) in fps
+
     conn = get_db()
     if did_fp:
         status,img,ai_r,ai_n = 'ok',None,None,'بصّم ✅'
     else:
-        img,err = fetch_snapshot(dev['channel_no'] if dev else 1, base_dt.strftime("%Y%m%dT%H%M%SZ"))
+        # سحب صورة من NVR عبر Agent
+        nvr_conn = get_db()
+        nvr = nvr_conn.execute(f"SELECT * FROM nvr_config LIMIT 1").fetchone()
+        nvr_conn.close()
+        img = None; err = None
+        if nvr and dev:
+            snap_time = base_dt.strftime("%Y%m%dT%H%M%SZ")
+            r2, err2 = agent_post('/nvr/snapshot', {
+                "ip": dict(nvr)['ip'], "port": dict(nvr)['port'],
+                "username": dict(nvr)['username'], "password": dict(nvr)['password'],
+                "channel": dict(dev)['channel_no'], "snap_time": snap_time
+            })
+            if r2 and r2.get('ok'):
+                img = r2.get('snapshot')
+            else:
+                err = err2 or 'خطأ الكاميرا'
+
         if img:
-            ai = analyze_image(img,emp['name'],shift_name,expected_time)
+            ai = analyze_image(img, emp['name'], shift_name, expected_time)
             status = 'present_no_fp' if ai['present'] else 'absent'
-            ai_r,ai_n = ai['confidence'],ai['notes']
+            ai_r,ai_n = ai['confidence'], ai['notes']
         else:
-            status,ai_r,ai_n = 'no_snapshot',None,f"خطأ: {err}"
-    if existing:
-        conn.execute("UPDATE attendance_log SET status=?,snapshot_b64=?,ai_result=?,ai_notes=? WHERE id=?",(status,img,ai_r,ai_n,existing['id']))
+            status,ai_r,ai_n = 'no_snapshot', None, f"خطأ: {err}"
+
+    ex_id = dict(existing)['id'] if existing else None
+    if ex_id:
+        conn.execute(f"UPDATE attendance_log SET status={PH},snapshot_b64={PH},ai_result={PH},ai_notes={PH} WHERE id={PH}", (status,img,ai_r,ai_n,ex_id))
     else:
-        conn.execute("INSERT OR IGNORE INTO attendance_log (employee_id,employee_name,emp_no,work_date,shift_name,expected_time,status,snapshot_b64,ai_result,ai_notes,device_id,channel_no) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",(emp['id'],emp['name'],emp['emp_no'],work_date,shift_name,expected_time,status,img,ai_r,ai_n,emp.get('device_id'),dev['channel_no'] if dev else None))
+        conn.execute(f"INSERT INTO attendance_log (employee_id,employee_name,emp_no,work_date,shift_name,expected_time,status,snapshot_b64,ai_result,ai_notes,device_id,channel_no) VALUES ({','.join([PH]*12)})",
+            (emp['id'],emp['name'],emp['emp_no'],str(work_date)[:10],shift_name,expected_time,status,img,ai_r,ai_n,emp.get('device_id'),dict(dev)['channel_no'] if dev else None))
     conn.commit(); conn.close()
 
+# ─── HTTP Handler ──────────────────────────────────────────
 class Handler(BaseHTTPRequestHandler):
     def log_message(self,fmt,*a): pass
     def send_json(self,data,code=200):
@@ -153,142 +187,99 @@ class Handler(BaseHTTPRequestHandler):
     def get_body(self):
         n=int(self.headers.get('Content-Length',0))
         return json.loads(self.rfile.read(n)) if n else {}
+
     def do_GET(self):
         parsed=urlparse(self.path); path=parsed.path; params=parse_qs(parsed.query)
         g=lambda k,d='': params.get(k,[d])[0]
         if path in ('/','/index.html'):
             f=os.path.join(os.path.dirname(os.path.abspath(__file__)),'index.html')
             content=open(f,'rb').read()
-            self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8'); self.send_header('Content-Length',len(content)); self.end_headers(); self.wfile.write(content); return
+            self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8')
+            self.send_header('Content-Length',len(content)); self.end_headers(); self.wfile.write(content); return
         conn=get_db()
         if path=='/api/nvr':
-            r=conn.execute("SELECT id,ip,port,username FROM nvr_config LIMIT 1").fetchone(); conn.close(); self.send_json(dict(r) if r else {})
+            r=conn.execute(f"SELECT id,ip,port,username FROM nvr_config LIMIT 1").fetchone()
+            conn.close(); self.send_json(dict(r) if r else {})
+        elif path=='/api/agent':
+            r=conn.execute(f"SELECT id,url FROM agent_config LIMIT 1").fetchone()
+            conn.close(); self.send_json(dict(r) if r else {})
+        elif path=='/api/agent/ping':
+            conn.close()
+            r,err = agent_get('/ping')
+            self.send_json(r if r else {"ok":False,"error":err})
         elif path=='/api/devices':
-            rows=[dict(r) for r in conn.execute("SELECT id,name,ip,port,username,channel_no,location FROM devices ORDER BY id").fetchall()]; conn.close(); self.send_json(rows)
+            rows=[dict(r) for r in conn.execute("SELECT id,name,ip,port,username,channel_no,location FROM devices ORDER BY id").fetchall()]
+            conn.close(); self.send_json(rows)
         elif path=='/api/employees':
-            rows=[dict(r) for r in conn.execute("SELECT e.*,d.name as device_name FROM employees e LEFT JOIN devices d ON e.device_id=d.id ORDER BY e.name").fetchall()]; conn.close(); self.send_json(rows)
+            rows=[dict(r) for r in conn.execute("SELECT e.*,d.name as device_name FROM employees e LEFT JOIN devices d ON e.device_id=d.id ORDER BY e.name").fetchall()]
+            conn.close(); self.send_json(rows)
         elif path=='/api/schedule':
-            rows=[dict(r) for r in conn.execute("SELECT ss.*,e.name FROM shift_schedule ss JOIN employees e ON ss.employee_id=e.id WHERE ss.work_date=?",(g('date',str(date.today())),)).fetchall()]; conn.close(); self.send_json(rows)
+            rows=[dict(r) for r in conn.execute(f"SELECT ss.*,e.name FROM shift_schedule ss JOIN employees e ON ss.employee_id=e.id WHERE ss.work_date={PH}",(g('date',str(date.today())),)).fetchall()]
+            conn.close(); self.send_json(rows)
         elif path=='/api/attendance':
-            q="SELECT * FROM attendance_log WHERE work_date=?"; p=[g('date',str(date.today()))]
-            if g('shift'): q+=" AND shift_name=?"; p.append(g('shift'))
-            if g('status'): q+=" AND status=?"; p.append(g('status'))
+            q=f"SELECT id,employee_name,emp_no,work_date,shift_name,expected_time,status,ai_result,ai_notes,snapshot_b64 FROM attendance_log WHERE work_date={PH}"; p=[g('date',str(date.today()))]
+            if g('shift'): q+=f" AND shift_name={PH}"; p.append(g('shift'))
+            if g('status'): q+=f" AND status={PH}"; p.append(g('status'))
             q+=" ORDER BY shift_name,employee_name"
-            rows=[dict(r) for r in conn.execute(q,p).fetchall()]; conn.close(); self.send_json(rows)
+            rows=[dict(r) for r in conn.execute(q,p).fetchall()]
+            conn.close(); self.send_json(rows)
         elif path=='/api/stats':
-            r=conn.execute("SELECT COUNT(*) total,SUM(CASE WHEN status='ok' THEN 1 ELSE 0 END) ok,SUM(CASE WHEN status='present_no_fp' THEN 1 ELSE 0 END) present_no_fp,SUM(CASE WHEN status='absent' THEN 1 ELSE 0 END) absent,SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) pending FROM attendance_log WHERE work_date=?",(g('date',str(date.today())),)).fetchone(); conn.close(); self.send_json(dict(r))
+            r=conn.execute(f"SELECT COUNT(*) total,SUM(CASE WHEN status='ok' THEN 1 ELSE 0 END) ok,SUM(CASE WHEN status='present_no_fp' THEN 1 ELSE 0 END) present_no_fp,SUM(CASE WHEN status='absent' THEN 1 ELSE 0 END) absent,SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) pending FROM attendance_log WHERE work_date={PH}",(g('date',str(date.today())),)).fetchone()
+            conn.close(); self.send_json(dict(r))
         else:
             conn.close(); self.send_json({"error":"not found"},404)
+
     def do_POST(self):
         path=urlparse(self.path).path; d=self.get_body(); conn=get_db()
         if path=='/api/nvr':
-            conn.execute("DELETE FROM nvr_config"); conn.execute("INSERT INTO nvr_config (ip,port,username,password) VALUES (?,?,?,?)",(d['ip'],d.get('port',80),d['username'],d['password'])); conn.commit(); conn.close(); self.send_json({"ok":True})
-        elif path=='/api/scan':
-            # مسح الشبكة للبحث عن أجهزة Hikvision
-            import threading, queue
-            username = d.get('username','admin')
-            password = d.get('password','')
-            subnets  = d.get('subnets', ['192.168.0','192.168.1','192.168.88'])
-            found    = []
-            q        = queue.Queue()
-
-            def check_host(ip, user, pw):
-                url = f"http://{ip}/ISAPI/System/deviceInfo"
-                try:
-                    data, status = http_req(url, user, pw)
-                    if data and status == 200:
-                        # نوع الجهاز
-                        info = data.decode('utf-8', errors='ignore')
-                        dev_type = 'camera'
-                        if 'Face' in info or 'Access' in info or 'DS-K' in info:
-                            dev_type = 'faceid'
-                        elif 'NVR' in info or 'DVR' in info:
-                            dev_type = 'nvr'
-                        # صورة لو كاميرا أو NVR
-                        preview = None
-                        if dev_type in ('camera','nvr'):
-                            snap_url = f"http://{ip}/ISAPI/Streaming/channels/101/picture"
-                            snap_data, _ = http_req(snap_url, user, pw)
-                            if snap_data and len(snap_data) > 500:
-                                preview = base64.b64encode(snap_data).decode()
-                        q.put({"ip": ip, "type": dev_type, "info": info[:200], "preview": preview})
-                except: pass
-
-            threads = []
-            for subnet in subnets:
-                for i in range(1, 255):
-                    ip = f"{subnet}.{i}"
-                    t = threading.Thread(target=check_host, args=(ip, username, password), daemon=True)
-                    threads.append(t)
-                    t.start()
-                    if len(threads) % 50 == 0:
-                        for th in threads[-50:]: th.join(timeout=3)
-
-            for th in threads: th.join(timeout=3)
-            while not q.empty(): found.append(q.get())
-            conn.close()
-            self.send_json({"ok": True, "devices": found, "total": len(found)})
-            # جلب كل الكاميرات من NVR تلقائياً
-            conn.close()
-            nvr2=get_db().execute("SELECT * FROM nvr_config LIMIT 1").fetchone()
-            get_db().close()
-            if not nvr2: self.send_json({"ok":False,"error":"NVR غير مُعدّ"}); return
-            cameras=[]
-            for ch in range(1,33):
-                url=f"http://{nvr2['ip']}:{nvr2['port']}/ISAPI/Streaming/channels/{ch}01/picture"
-                data,status=http_req(url,nvr2['username'],nvr2['password'])
-                if data and len(data)>500:
-                    cameras.append({"channel":ch,"name":f"Camera {ch:02d}","preview":base64.b64encode(data).decode()})
-            self.send_json({"ok":True,"cameras":cameras})
-
+            conn.execute(f"DELETE FROM nvr_config")
+            conn.execute(f"INSERT INTO nvr_config (ip,port,username,password) VALUES ({PH},{PH},{PH},{PH})",(d['ip'],d.get('port',80),d['username'],d['password']))
+            conn.commit(); conn.close(); self.send_json({"ok":True})
         elif path=='/api/nvr/test':
             conn.close()
-            url=f"http://{d['ip']}:{d.get('port',80)}/ISAPI/Streaming/channels/101/picture"
-            data,status=http_req(url,d['username'],d['password'])
-            if data and len(data)>500: self.send_json({"ok":True,"snapshot":base64.b64encode(data).decode()})
-            else: self.send_json({"ok":False,"error":f"تأكد من IP وكلمة المرور ({status})"})
+            r,err = agent_post('/nvr/snapshot',{"ip":d['ip'],"port":d.get('port',80),"username":d['username'],"password":d['password'],"channel":1})
+            if r and r.get('ok'): self.send_json({"ok":True,"snapshot":r['snapshot']})
+            else: self.send_json({"ok":False,"error":err or r.get('error','فشل الاتصال')})
+        elif path=='/api/agent':
+            conn.execute(f"DELETE FROM agent_config")
+            conn.execute(f"INSERT INTO agent_config (url,secret) VALUES ({PH},{PH})",(d['url'],d.get('secret',AGENT_SECRET)))
+            conn.commit(); conn.close(); self.send_json({"ok":True})
+        elif path=='/api/agent/register':
+            conn.execute(f"DELETE FROM agent_config")
+            conn.execute(f"INSERT INTO agent_config (url,secret) VALUES ({PH},{PH})",(d.get('url',''),d.get('secret','')))
+            conn.commit(); conn.close(); self.send_json({"ok":True})
+        elif path=='/api/agent/heartbeat':
+            conn.close(); self.send_json({"ok":True})
+        elif path=='/api/scan':
+            conn.close()
+            r,err = agent_post('/scan',d)
+            if r: self.send_json(r)
+            else: self.send_json({"ok":False,"error":err})
+        elif path=='/api/nvr/cameras':
+            conn.close()
+            r,err = agent_post('/nvr/cameras',d)
+            if r: self.send_json(r)
+            else: self.send_json({"ok":False,"error":err or "Agent غير متصل"})
         elif path=='/api/devices':
-            if d.get('id'): conn.execute("UPDATE devices SET name=?,ip=?,port=?,username=?,password=?,channel_no=?,location=? WHERE id=?",(d['name'],d['ip'],d.get('port',80),d.get('username','admin'),d.get('password',''),d['channel_no'],d.get('location',''),d['id']))
-            else: conn.execute("INSERT INTO devices (name,ip,port,username,password,channel_no,location) VALUES (?,?,?,?,?,?,?)",(d['name'],d['ip'],d.get('port',80),d.get('username','admin'),d.get('password',''),d['channel_no'],d.get('location','')))
+            if d.get('id'): conn.execute(f"UPDATE devices SET name={PH},ip={PH},port={PH},username={PH},password={PH},channel_no={PH},location={PH} WHERE id={PH}",(d['name'],d['ip'],d.get('port',80),d.get('username','admin'),d.get('password',''),d['channel_no'],d.get('location',''),d['id']))
+            else: conn.execute(f"INSERT INTO devices (name,ip,port,username,password,channel_no,location) VALUES ({PH},{PH},{PH},{PH},{PH},{PH},{PH})",(d['name'],d['ip'],d.get('port',80),d.get('username','admin'),d.get('password',''),d['channel_no'],d.get('location','')))
             conn.commit(); conn.close(); self.send_json({"ok":True})
         elif path=='/api/employees':
-            if d.get('id'): conn.execute("UPDATE employees SET name=?,emp_no=?,fingerprint_no=?,emp_type=?,device_id=?,regular_start=?,regular_end=? WHERE id=?",(d['name'],d['emp_no'],d['fingerprint_no'],d['emp_type'],d.get('device_id'),d.get('regular_start','07:00'),d.get('regular_end','13:45'),d['id']))
-            else: conn.execute("INSERT INTO employees (name,emp_no,fingerprint_no,emp_type,device_id,regular_start,regular_end) VALUES (?,?,?,?,?,?,?)",(d['name'],d['emp_no'],d['fingerprint_no'],d['emp_type'],d.get('device_id'),d.get('regular_start','07:00'),d.get('regular_end','13:45')))
+            if d.get('id'): conn.execute(f"UPDATE employees SET name={PH},emp_no={PH},fingerprint_no={PH},emp_type={PH},device_id={PH},regular_start={PH},regular_end={PH} WHERE id={PH}",(d['name'],d['emp_no'],d['fingerprint_no'],d['emp_type'],d.get('device_id'),d.get('regular_start','07:00'),d.get('regular_end','13:45'),d['id']))
+            else: conn.execute(f"INSERT INTO employees (name,emp_no,fingerprint_no,emp_type,device_id,regular_start,regular_end) VALUES ({PH},{PH},{PH},{PH},{PH},{PH},{PH})",(d['name'],d['emp_no'],d['fingerprint_no'],d['emp_type'],d.get('device_id'),d.get('regular_start','07:00'),d.get('regular_end','13:45')))
             conn.commit(); conn.close(); self.send_json({"ok":True})
         elif path=='/api/schedule':
-            conn.execute("INSERT OR REPLACE INTO shift_schedule (employee_id,work_date,shift_name) VALUES (?,?,?)",(d['employee_id'],d['work_date'],d['shift_name'])); conn.commit(); conn.close(); self.send_json({"ok":True})
-        elif path=='/api/schedule/bulk':
-            for eid in d['employee_ids']: conn.execute("INSERT OR REPLACE INTO shift_schedule (employee_id,work_date,shift_name) VALUES (?,?,?)",(eid,d['work_date'],d['shift_name']))
+            conn.execute(f"INSERT OR REPLACE INTO shift_schedule (employee_id,work_date,shift_name) VALUES ({PH},{PH},{PH})",(d['employee_id'],d['work_date'],d['shift_name']))
             conn.commit(); conn.close(); self.send_json({"ok":True})
-        elif path=='/api/rawlogs':
-            dev=conn.execute("SELECT * FROM devices WHERE id=?",(d['device_id'],)).fetchone()
-            if not dev: conn.close(); self.send_json({"ok":False,"error":"جهاز غير موجود"}); return
-            # جلب كل الموظفين لمطابقة الأرقام
-            emps={str(r['fingerprint_no']):r['name'] for r in conn.execute("SELECT name,fingerprint_no FROM employees WHERE device_id=?",(d['device_id'],)).fetchall()}
-            conn.close()
-            # نافذة اليوم كاملة
-            work_date = d.get('date', str(date.today()))
-            start_dt = datetime.strptime(work_date,"%Y-%m-%d").replace(hour=0,minute=0,second=0)
-            end_dt   = start_dt.replace(hour=23,minute=59,second=59)
-            logs, err = fetch_face_events(dev['ip'],dev['port'],dev['username'],dev['password'],start_dt,end_dt)
-            if err and not logs:
-                self.send_json({"ok":False,"error":f"تعذر الاتصال بالجهاز: {err}"}); return
-            # إعادة كل السجلات مع الوقت
-            url2 = f"http://{dev['ip']}:{dev['port']}/ISAPI/AccessControl/AcsEvent?format=json"
-            body2 = json.dumps({"AcsEventCond":{"searchID":"1","searchResultPosition":0,"maxResults":1000,"major":5,"minor":75,"startTime":start_dt.strftime("%Y-%m-%dT%H:%M:%S+03:00"),"endTime":end_dt.strftime("%Y-%m-%dT%H:%M:%S+03:00")}}).encode()
-            data2, _ = http_req(url2,dev['username'],dev['password'],'POST',body2)
-            raw_logs = []
-            if data2:
-                try:
-                    events = json.loads(data2).get("AcsEvent",{}).get("InfoList",[])
-                    for e in events:
-                        raw_logs.append({"card_no":str(e.get("cardNo",e.get("employeeNoString",""))),"time":e.get("time",""),"door_no":e.get("doorNo",1)})
-                except: pass
-            self.send_json({"ok":True,"logs":raw_logs,"employees":emps,"total":len(raw_logs)})
+        elif path=='/api/schedule/bulk':
+            for eid in d['employee_ids']:
+                conn.execute(f"INSERT OR REPLACE INTO shift_schedule (employee_id,work_date,shift_name) VALUES ({PH},{PH},{PH})",(eid,d['work_date'],d['shift_name']))
+            conn.commit(); conn.close(); self.send_json({"ok":True})
+        elif path=='/api/check':
             work_date=d.get('date',str(date.today())); target_shift=d.get('shift','')
             shifts_map={'صباحية':'07:00','ظهيرة':'13:45','مسائية':'17:00','ليلية':'23:00'}
             regular=[dict(r) for r in conn.execute("SELECT * FROM employees WHERE emp_type='regular'").fetchall()]
-            rotating=[dict(r) for r in conn.execute("SELECT e.*,ss.shift_name as sched_shift FROM employees e JOIN shift_schedule ss ON ss.employee_id=e.id WHERE e.emp_type='rotating' AND ss.work_date=?",(work_date,)).fetchall()]
+            rotating=[dict(r) for r in conn.execute(f"SELECT e.*,ss.shift_name as sched_shift FROM employees e JOIN shift_schedule ss ON ss.employee_id=e.id WHERE e.emp_type='rotating' AND ss.work_date={PH}",(work_date,)).fetchall()]
             conn.close()
             def bg():
                 for emp in regular:
@@ -300,14 +291,23 @@ class Handler(BaseHTTPRequestHandler):
                     check_employee(emp,work_date,shift,shifts_map.get(shift,'07:00'))
             threading.Thread(target=bg,daemon=True).start()
             self.send_json({"ok":True})
+        elif path=='/api/rawlogs':
+            dev=conn.execute(f"SELECT * FROM devices WHERE id={PH}",(d['device_id'],)).fetchone()
+            if not dev: conn.close(); self.send_json({"ok":False,"error":"جهاز غير موجود"}); return
+            emps={str(r['fingerprint_no']):r['name'] for r in conn.execute(f"SELECT name,fingerprint_no FROM employees WHERE device_id={PH}",(d['device_id'],)).fetchall()}
+            conn.close()
+            r,err = agent_post('/device/events',{"ip":dict(dev)['ip'],"port":dict(dev)['port'],"username":dict(dev)['username'],"password":dict(dev)['password'],"start":f"{d.get('date',str(date.today()))}T00:00:00","end":f"{d.get('date',str(date.today()))}T23:59:59"})
+            if r: self.send_json({"ok":True,"logs":r.get('events',[]),"employees":emps})
+            else: self.send_json({"ok":False,"error":err})
         else:
             conn.close(); self.send_json({"error":"not found"},404)
+
     def do_DELETE(self):
         path=urlparse(self.path).path; conn=get_db()
         try:
             rid=int(path.split('/')[-1])
-            if 'devices' in path: conn.execute("DELETE FROM devices WHERE id=?",(rid,))
-            elif 'employees' in path: conn.execute("DELETE FROM employees WHERE id=?",(rid,))
+            if 'devices' in path: conn.execute(f"DELETE FROM devices WHERE id={PH}",(rid,))
+            elif 'employees' in path: conn.execute(f"DELETE FROM employees WHERE id={PH}",(rid,))
             conn.commit()
         except: pass
         conn.close(); self.send_json({"ok":True})
@@ -315,12 +315,10 @@ class Handler(BaseHTTPRequestHandler):
 if __name__=='__main__':
     init_db()
     print("="*50)
-    print("  نظام الحضور الذكي — OPDC صلاح الدين")
-    print(f"  http://localhost:{PORT}")
+    print("  نظام الحضور الذكي — OPDC")
+    print(f"  Port: {PORT}")
     print("="*50)
-    def ob(): _time.sleep(1.5); webbrowser.open(f"http://localhost:{PORT}")
-    threading.Thread(target=ob,daemon=True).start()
     server=HTTPServer(('0.0.0.0',PORT),Handler)
-    print("✅ النظام يعمل — اضغط Ctrl+C للإيقاف\n")
+    print(f"✅ Running on port {PORT}")
     try: server.serve_forever()
-    except KeyboardInterrupt: print("\n🛑 متوقف")
+    except KeyboardInterrupt: print("\n🛑 Stopped")
