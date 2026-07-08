@@ -42,13 +42,16 @@ else:
 
 def init_db():
     conn = get_db(); c = conn.cursor()
+    ID   = 'SERIAL' if USE_PG else 'INTEGER'
+    DT   = 'DATE'   if USE_PG else 'TEXT'
+    NOW  = 'NOW()'  if USE_PG else "(datetime('now','localtime'))"
     stmts = [
-        f"CREATE TABLE IF NOT EXISTS nvr_config (id {'SERIAL' if USE_PG else 'INTEGER'} PRIMARY KEY, ip TEXT, port INTEGER DEFAULT 80, username TEXT, password TEXT)",
-        f"CREATE TABLE IF NOT EXISTS agent_config (id {'SERIAL' if USE_PG else 'INTEGER'} PRIMARY KEY, url TEXT, secret TEXT)",
-        f"CREATE TABLE IF NOT EXISTS devices (id {'SERIAL' if USE_PG else 'INTEGER'} PRIMARY KEY, name TEXT UNIQUE, ip TEXT, port INTEGER DEFAULT 80, username TEXT DEFAULT 'admin', password TEXT, channel_no INTEGER, location TEXT)",
-        f"CREATE TABLE IF NOT EXISTS employees (id {'SERIAL' if USE_PG else 'INTEGER'} PRIMARY KEY, name TEXT, emp_no TEXT UNIQUE, fingerprint_no TEXT, emp_type TEXT DEFAULT 'regular', device_id INTEGER, regular_start TEXT DEFAULT '07:00', regular_end TEXT DEFAULT '13:45')",
-        f"CREATE TABLE IF NOT EXISTS shift_schedule (id {'SERIAL' if USE_PG else 'INTEGER'} PRIMARY KEY, employee_id INTEGER, work_date {'DATE' if USE_PG else 'TEXT'}, shift_name TEXT, UNIQUE(employee_id, work_date))",
-        f"CREATE TABLE IF NOT EXISTS attendance_log (id {'SERIAL' if USE_PG else 'INTEGER'} PRIMARY KEY, employee_id INTEGER, employee_name TEXT, emp_no TEXT, work_date {'DATE' if USE_PG else 'TEXT'}, shift_name TEXT, expected_time TEXT, actual_time TEXT, status TEXT DEFAULT 'pending', snapshot_b64 TEXT, ai_result TEXT, ai_notes TEXT, device_id INTEGER, channel_no INTEGER, created_at TIMESTAMP DEFAULT {'NOW()' if USE_PG else \"(datetime('now','localtime'))\"}, UNIQUE(employee_id, work_date, shift_name))",
+        f"CREATE TABLE IF NOT EXISTS nvr_config (id {ID} PRIMARY KEY, ip TEXT, port INTEGER DEFAULT 80, username TEXT, password TEXT)",
+        f"CREATE TABLE IF NOT EXISTS agent_config (id {ID} PRIMARY KEY, url TEXT, secret TEXT)",
+        f"CREATE TABLE IF NOT EXISTS devices (id {ID} PRIMARY KEY, name TEXT UNIQUE, ip TEXT, port INTEGER DEFAULT 80, username TEXT DEFAULT 'admin', password TEXT, channel_no INTEGER, location TEXT)",
+        f"CREATE TABLE IF NOT EXISTS employees (id {ID} PRIMARY KEY, name TEXT, emp_no TEXT UNIQUE, fingerprint_no TEXT, emp_type TEXT DEFAULT 'regular', device_id INTEGER, regular_start TEXT DEFAULT '07:00', regular_end TEXT DEFAULT '13:45')",
+        f"CREATE TABLE IF NOT EXISTS shift_schedule (id {ID} PRIMARY KEY, employee_id INTEGER, work_date {DT}, shift_name TEXT, UNIQUE(employee_id, work_date))",
+        f"CREATE TABLE IF NOT EXISTS attendance_log (id {ID} PRIMARY KEY, employee_id INTEGER, employee_name TEXT, emp_no TEXT, work_date {DT}, shift_name TEXT, expected_time TEXT, actual_time TEXT, status TEXT DEFAULT 'pending', snapshot_b64 TEXT, ai_result TEXT, ai_notes TEXT, device_id INTEGER, channel_no INTEGER, created_at TIMESTAMP DEFAULT {NOW}, UNIQUE(employee_id, work_date, shift_name))",
     ]
     for s in stmts:
         c.execute(s)
