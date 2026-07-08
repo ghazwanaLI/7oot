@@ -146,6 +146,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
     <div class="ni" onclick="go('employees')"><span class="ic">👥</span>الموظفون</div>
     <div class="ni" onclick="go('devices')"><span class="ic">🖐</span>أجهزة البصمة</div>
     <div class="ni" onclick="go('scan')"><span class="ic">🔎</span>مسح الشبكة</div>
+    <div class="ni" onclick="go('agent')"><span class="ic">🔌</span>إعداد Agent</div>
     <div class="ni" onclick="go('nvr')"><span class="ic">🎥</span>إعداد NVR</div>
     <div class="ni" onclick="go('rawlogs')"><span class="ic">📡</span>سجلات الجهاز</div>
   </nav>
@@ -390,6 +391,39 @@ tr:hover td{background:rgba(255,255,255,.015)}
 
 </main>
 
+<!-- ══ Agent ══ -->
+<div id="pg-agent" class="page">
+  <div class="ph"><h1>🔌 إعداد Agent</h1><p>ربط النظام بحاسبتك المحلية</p></div>
+  <div class="card">
+    <h3>⚙️ بيانات Agent</h3>
+    <div id="agent-alert" style="margin-bottom:12px"></div>
+    <div class="grid2">
+      <div class="fg full">
+        <label>رابط Agent (ngrok أو IP عام)</label>
+        <input id="agent-url" placeholder="https://xxxx.ngrok.io أو http://IP:8080">
+      </div>
+      <div class="fg">
+        <label>كلمة السر</label>
+        <input id="agent-secret" value="opdc-secret-2026">
+      </div>
+    </div>
+    <div class="btns">
+      <button class="btn btn-p" onclick="saveAgent()">💾 حفظ</button>
+      <button class="btn btn-o" onclick="pingAgent()">🔗 اختبار الاتصال</button>
+    </div>
+    <div id="agent-test" style="margin-top:14px"></div>
+  </div>
+  <div class="card">
+    <h3>📋 خطوات تشغيل Agent على حاسبتك</h3>
+    <div style="font-size:13px;line-height:2;color:var(--muted)">
+      <p>1. حمّل ملف <strong style="color:var(--text)">agent.py</strong> على حاسبتك</p>
+      <p>2. شغّله: <code style="background:var(--surf);padding:2px 8px;border-radius:4px">python agent.py</code></p>
+      <p>3. استخدم ngrok للوصول من الإنترنت: <code style="background:var(--surf);padding:2px 8px;border-radius:4px">ngrok http 8080</code></p>
+      <p>4. انسخ الرابط وضعه أعلاه</p>
+    </div>
+  </div>
+</div>
+
 <!-- ══ Scan ══ -->
 <div id="pg-scan" class="page">
   <div class="ph"><h1>🔎 مسح الشبكة</h1><p>البحث التلقائي عن أجهزة Hikvision على الشبكة</p></div>
@@ -470,6 +504,7 @@ function go(name) {
   if (name==='employees')  { loadEmployees(); loadDevicesSelect(); }
   if (name==='devices')    loadDevices();
   if (name==='nvr')        loadNVR();
+  if (name==='agent')      { loadAgent(); }
   if (name==='scan')       { }
   if (name==='rawlogs')   { loadRawDevices(); document.getElementById('rl-date').value=today(); }
 }
@@ -718,6 +753,25 @@ function resetEmpForm(){
   document.getElementById('emp-type').value='regular';
   document.getElementById('emp-dev').value='';
   toggleEmpType();
+}
+
+// ─── Agent ────────────────────────────────────────────────
+async function loadAgent(){
+  const r=await api('/api/agent');
+  if(r.url) document.getElementById('agent-url').value=r.url;
+}
+async function saveAgent(){
+  const r=await api('/api/agent',{method:'POST',body:JSON.stringify({url:document.getElementById('agent-url').value,secret:document.getElementById('agent-secret').value})});
+  const el=document.getElementById('agent-alert');
+  el.innerHTML=r.ok?'<div class="al s">✅ تم الحفظ</div>':'<div class="al e">❌ خطأ</div>';
+  setTimeout(()=>el.innerHTML='',3000);
+}
+async function pingAgent(){
+  const el=document.getElementById('agent-test');
+  el.innerHTML='<div class="al i">🔗 جاري الاتصال...</div>';
+  const r=await api('/api/agent/ping');
+  if(r.ok) el.innerHTML=`<div class="al s">✅ Agent متصل — ${r.time}</div>`;
+  else el.innerHTML=`<div class="al e">❌ Agent غير متصل — ${r.error||'تحقق من الرابط'}</div>`;
 }
 
 // ─── Network Scan ─────────────────────────────────────────
