@@ -1,8 +1,0 @@
-[phases.setup]
-nixPkgs = ["python311"]
-
-[phases.install]
-cmds = ["pip install pg8000"]
-
-[start]
-cmd = "python station_server.py"
