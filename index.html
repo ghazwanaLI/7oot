@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>نظام الحضور الذكي — OPDC صلاح الدين</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0f17; --surf:#111827; --card:#1a2235; --border:#1e2d45;
+  --accent:#3b82f6; --green:#10b981; --yellow:#f59e0b; --red:#ef4444; --purple:#8b5cf6;
+  --text:#f1f5f9; --muted:#64748b; --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+
+/* ─── Sidebar ─── */
+.sidebar{width:230px;min-height:100vh;background:var(--surf);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.logo{padding:22px 18px;border-bottom:1px solid var(--border)}
+.logo h2{font-size:14px;font-weight:800;line-height:1.5;color:var(--text)}
+.logo p{font-size:11px;color:var(--muted);margin-top:2px}
+.nav{padding:10px 0;flex:1}
+.ni{display:flex;align-items:center;gap:10px;padding:11px 18px;cursor:pointer;font-size:13.5px;color:var(--muted);border-right:3px solid transparent;transition:.15s;user-select:none}
+.ni:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.ni.active{color:var(--accent);background:rgba(59,130,246,.08);border-right-color:var(--accent)}
+.ni .ic{font-size:17px;width:20px;text-align:center}
+.sidebar-footer{padding:14px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
+
+/* ─── Main ─── */
+.main{flex:1;padding:26px;overflow-x:hidden}
+.page{display:none}.page.active{display:block}
+.ph{margin-bottom:22px}.ph h1{font-size:20px;font-weight:800}
+.ph p{color:var(--muted);font-size:13px;margin-top:3px}
+
+/* ─── Stats ─── */
+.sg{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+.sc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px}
+.sc .lbl{font-size:11px;color:var(--muted);margin-bottom:6px}
+.sc .val{font-size:28px;font-weight:900}
+.sc.ok   .val{color:var(--green)}
+.sc.nofp .val{color:var(--yellow)}
+.sc.abs  .val{color:var(--red)}
+.sc.pend .val{color:var(--muted)}
+.sc.tot  .val{color:var(--accent)}
+
+/* ─── Card ─── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:18px}
+.card h3{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+/* ─── Form ─── */
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:12px;color:var(--muted)}
+input,select,textarea{background:var(--surf);border:1px solid var(--border);border-radius:7px;padding:9px 13px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:13.5px;width:100%;transition:.15s}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.full{grid-column:1/-1}
+
+/* ─── Buttons ─── */
+.btn{padding:9px 18px;border-radius:7px;border:none;font-family:'Tajawal',sans-serif;font-size:13.5px;font-weight:700;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:7px}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:#2563eb}
+.btn-g{background:var(--green);color:#fff}.btn-g:hover{background:#059669}
+.btn-y{background:var(--yellow);color:#000}.btn-y:hover{background:#d97706}
+.btn-r{background:var(--red);color:#fff}.btn-r:hover{background:#dc2626}
+.btn-o{background:transparent;border:1px solid var(--border);color:var(--text)}.btn-o:hover{background:rgba(255,255,255,.05)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+
+/* ─── Table ─── */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 12px;text-align:right;color:var(--muted);font-size:11px;font-weight:700;border-bottom:1px solid var(--border)}
+td{padding:11px 12px;border-bottom:1px solid rgba(30,45,69,.6);vertical-align:middle}
+tr:last-child td{border:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+
+/* ─── Badge ─── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:700}
+.badge.ok{background:rgba(16,185,129,.12);color:#10b981}
+.badge.present_no_fp{background:rgba(245,158,11,.12);color:#f59e0b}
+.badge.absent{background:rgba(239,68,68,.12);color:#ef4444}
+.badge.pending,.badge.no_snapshot{background:rgba(100,116,139,.12);color:#94a3b8}
+
+/* ─── Shift pills ─── */
+.shift-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid transparent;transition:.15s}
+.sp-صباحية{background:rgba(251,191,36,.12);color:#fbbf24;border-color:rgba(251,191,36,.3)}
+.sp-ظهيرة{background:rgba(59,130,246,.12);color:#60a5fa;border-color:rgba(59,130,246,.3)}
+.sp-مسائية{background:rgba(139,92,246,.12);color:#a78bfa;border-color:rgba(139,92,246,.3)}
+.sp-ليلية{background:rgba(30,41,59,.6);color:#94a3b8;border-color:rgba(148,163,184,.3)}
+
+/* ─── Photo thumb ─── */
+.thumb{width:48px;height:38px;object-fit:cover;border-radius:5px;cursor:pointer;border:1px solid var(--border);transition:.15s}
+.thumb:hover{border-color:var(--accent);transform:scale(1.05)}
+
+/* ─── Modal ─── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:999;padding:20px}
+.overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:26px;max-width:580px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:17px;font-weight:800;margin-bottom:14px}
+.modal img{width:100%;border-radius:8px;margin-bottom:14px}
+.mi{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.mi div{background:var(--surf);border-radius:7px;padding:11px}
+.mi span{display:block;font-size:10px;color:var(--muted);margin-bottom:3px}
+.mi strong{font-size:13px}
+
+/* ─── Alert ─── */
+.al{padding:11px 14px;border-radius:7px;font-size:13px;margin-bottom:14px}
+.al.s{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:#10b981}
+.al.e{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#ef4444}
+.al.i{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);color:#60a5fa}
+.al.w{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#f59e0b}
+
+/* ─── Progress ─── */
+.pbw{background:var(--surf);border-radius:8px;height:6px;overflow:hidden;margin-top:10px}
+.pb{height:100%;background:var(--accent);border-radius:8px;transition:width .3s}
+
+/* ─── Date picker row ─── */
+.date-row{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.date-row input,.date-row select{width:auto}
+
+/* ─── Schedule grid ─── */
+.sch-emp{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surf);border-radius:7px;margin-bottom:8px}
+.sch-emp .info{font-size:13.5px;font-weight:600}
+.sch-emp .sub{font-size:11px;color:var(--muted)}
+.sch-shifts{display:flex;gap:6px;flex-wrap:wrap}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+
+.empty{text-align:center;color:var(--muted);padding:40px;font-size:13.5px}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">
+    <h2>📹 نظام الحضور الذكي</h2>
+    <p>OPDC — صلاح الدين</p>
+  </div>
+  <nav class="nav">
+    <div class="ni active" onclick="go('dashboard')"><span class="ic">🏠</span>لوحة التحكم</div>
+    <div class="ni" onclick="go('check')"><span class="ic">🔍</span>فحص الحضور</div>
+    <div class="ni" onclick="go('results')"><span class="ic">📋</span>النتائج والصور</div>
+    <div class="ni" onclick="go('schedule')"><span class="ic">📅</span>جدول المناوبات</div>
+    <div class="ni" onclick="go('employees')"><span class="ic">👥</span>الموظفون</div>
+    <div class="ni" onclick="go('devices')"><span class="ic">🖐</span>أجهزة البصمة</div>
+    <div class="ni" onclick="go('scan')"><span class="ic">🔎</span>مسح الشبكة</div>
+    <div class="ni" onclick="go('nvr')"><span class="ic">🎥</span>إعداد NVR</div>
+    <div class="ni" onclick="go('rawlogs')"><span class="ic">📡</span>سجلات الجهاز</div>
+  </nav>
+  <div class="sidebar-footer">v2.0 — Hikvision DS-9632NI</div>
+</aside>
+
+<main class="main">
+
+<!-- ══ Dashboard ══ -->
+<div id="pg-dashboard" class="page active">
+  <div class="ph"><h1>لوحة التحكم</h1><p id="dash-date"></p></div>
+  <div class="sg">
+    <div class="sc tot"><div class="lbl">إجمالي السجلات</div><div class="val" id="s-tot">—</div></div>
+    <div class="sc ok"><div class="lbl">✅ بصّم</div><div class="val" id="s-ok">—</div></div>
+    <div class="sc nofp"><div class="lbl">📸 جاء بدون بصمة</div><div class="val" id="s-nofp">—</div></div>
+    <div class="sc abs"><div class="lbl">❌ غائب</div><div class="val" id="s-abs">—</div></div>
+    <div class="sc pend"><div class="lbl">⏳ لم يُفحص</div><div class="val" id="s-pend">—</div></div>
+  </div>
+
+  <div class="card">
+    <h3>⚡ فحص سريع لليوم</h3>
+    <div class="date-row">
+      <input type="date" id="quick-date">
+      <select id="quick-shift">
+        <option value="">كل الورديات</option>
+        <option value="صباحية">🌅 صباحية (7:00)</option>
+        <option value="ظهيرة">🌞 ظهيرة (13:45)</option>
+        <option value="مسائية">🌆 مسائية (17:00)</option>
+        <option value="ليلية">🌙 ليلية (23:00)</option>
+        <option value="انصراف">🚪 انصراف (عاديين)</option>
+      </select>
+      <button class="btn btn-p" onclick="runCheck()">🤖 ابدأ الفحص</button>
+      <button class="btn btn-o" onclick="loadStats()">🔄 تحديث</button>
+    </div>
+    <div id="check-progress" style="display:none">
+      <div id="check-msg" style="font-size:13px;color:var(--muted)"></div>
+      <div class="pbw"><div class="pb" id="check-pb" style="width:30%"></div></div>
+    </div>
+    <div id="check-result" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <h3>🚨 من جاء بدون بصمة — اليوم</h3>
+    <div id="dash-nofp"><div class="empty">لا توجد بيانات بعد</div></div>
+  </div>
+</div>
+
+<!-- ══ Check ══ -->
+<div id="pg-check" class="page">
+  <div class="ph"><h1>فحص الحضور</h1><p>فحص بصمات الموظفين مقارنةً بالكاميرا</p></div>
+  <div class="card">
+    <h3>🔍 إعدادات الفحص</h3>
+    <div class="grid3">
+      <div class="fg"><label>التاريخ</label><input type="date" id="chk-date"></div>
+      <div class="fg"><label>الوردية</label>
+        <select id="chk-shift">
+          <option value="">كل الورديات</option>
+          <option value="صباحية">🌅 صباحية — 7:00</option>
+          <option value="ظهيرة">🌞 ظهيرة — 13:45</option>
+          <option value="مسائية">🌆 مسائية — 17:00</option>
+          <option value="ليلية">🌙 ليلية — 23:00</option>
+          <option value="انصراف">🚪 انصراف عاديين</option>
+        </select>
+      </div>
+    </div>
+    <div id="chk-alert" style="margin-top:14px"></div>
+    <div class="btns">
+      <button class="btn btn-p" onclick="startCheck()">🤖 بدء الفحص الذكي</button>
+    </div>
+    <div id="chk-progress" style="display:none;margin-top:14px">
+      <div id="chk-msg" style="font-size:13px;color:var(--muted);margin-bottom:6px"></div>
+      <div class="pbw"><div class="pb" id="chk-pb" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Results ══ -->
+<div id="pg-results" class="page">
+  <div class="ph"><h1>النتائج والصور</h1><p>عرض نتائج الفحص مع صور الكاميرا</p></div>
+  <div class="card">
+    <div class="date-row">
+      <input type="date" id="res-date" onchange="loadResults()">
+      <select id="res-shift" onchange="loadResults()">
+        <option value="">كل الورديات</option>
+        <option value="صباحية">🌅 صباحية</option>
+        <option value="ظهيرة">🌞 ظهيرة</option>
+        <option value="مسائية">🌆 مسائية</option>
+        <option value="ليلية">🌙 ليلية</option>
+        <option value="انصراف">🚪 انصراف</option>
+      </select>
+      <select id="res-status" onchange="loadResults()">
+        <option value="">كل الحالات</option>
+        <option value="present_no_fp">📸 جاء بدون بصمة</option>
+        <option value="absent">❌ غائب</option>
+        <option value="ok">✅ بصّم</option>
+        <option value="no_snapshot">⚠️ لا صورة</option>
+      </select>
+      <button class="btn btn-o btn-sm" onclick="loadResults()">🔄</button>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr>
+          <th>الموظف</th><th>الوردية</th><th>الوقت المتوقع</th><th>الحالة</th>
+          <th>صورة الكاميرا</th><th>تحليل AI</th><th>إجراء</th>
+        </tr></thead>
+        <tbody id="res-tbody"><tr><td colspan="7" class="empty">اختر تاريخاً وابحث</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Schedule ══ -->
+<div id="pg-schedule" class="page">
+  <div class="ph"><h1>جدول المناوبات</h1><p>تعيين الوردية لكل موظف مناوب يومياً</p></div>
+  <div class="card">
+    <div class="date-row">
+      <input type="date" id="sch-date" onchange="loadSchedule()">
+      <button class="btn btn-o btn-sm" onclick="loadSchedule()">🔄 تحديث</button>
+    </div>
+    <div id="sch-alert" style="margin-bottom:12px"></div>
+    <div id="sch-list"><div class="empty">لا يوجد موظفون مناوبون</div></div>
+  </div>
+
+  <div class="card">
+    <h3>📋 تعيين جماعي</h3>
+    <div class="grid3">
+      <div class="fg"><label>التاريخ</label><input type="date" id="bulk-date"></div>
+      <div class="fg"><label>الوردية</label>
+        <select id="bulk-shift">
+          <option value="صباحية">🌅 صباحية — 7:00</option>
+          <option value="ظهيرة">🌞 ظهيرة — 13:45</option>
+          <option value="مسائية">🌆 مسائية — 17:00</option>
+          <option value="ليلية">🌙 ليلية — 23:00</option>
+        </select>
+      </div>
+    </div>
+    <div id="bulk-emps" style="margin-top:14px"></div>
+    <div class="btns"><button class="btn btn-p" onclick="bulkAssign()">💾 تعيين للمحددين</button></div>
+    <div id="bulk-alert" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- ══ Employees ══ -->
+<div id="pg-employees" class="page">
+  <div class="ph"><h1>إدارة الموظفين</h1><p>أسماء الموظفين وأرقام بصماتهم</p></div>
+  <div class="card">
+    <h3>➕ إضافة / تعديل موظف</h3>
+    <input type="hidden" id="emp-id">
+    <div class="grid3">
+      <div class="fg"><label>الاسم الكامل</label><input id="emp-name" placeholder="علي أحمد محمد"></div>
+      <div class="fg"><label>الرقم الوظيفي</label><input id="emp-no" placeholder="1001"></div>
+      <div class="fg"><label>رقم البصمة (DS-K)</label><input id="emp-fp" placeholder="12345"></div>
+      <div class="fg"><label>النوع</label>
+        <select id="emp-type" onchange="toggleEmpType()">
+          <option value="regular">موظف عادي (صباحي)</option>
+          <option value="rotating">موظف مناوب</option>
+        </select>
+      </div>
+      <div class="fg"><label>جهاز البصمة</label>
+        <select id="emp-dev"><option value="">— اختر الجهاز —</option></select>
+      </div>
+      <div class="fg" id="emp-end-wrap">
+        <label>وقت الانصراف</label>
+        <select id="emp-end">
+          <option value="13:45">13:45</option>
+          <option value="17:00">17:00</option>
+        </select>
+      </div>
+    </div>
+    <div id="emp-alert" style="margin-top:12px"></div>
+    <div class="btns">
+      <button class="btn btn-g" onclick="saveEmployee()">💾 حفظ</button>
+      <button class="btn btn-o" onclick="resetEmpForm()">↩ إلغاء</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>👥 قائمة الموظفين</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th>الاسم</th><th>الرقم</th><th>رقم البصمة</th><th>النوع</th><th>الجهاز</th><th>الانصراف</th><th></th></tr></thead>
+        <tbody id="emp-tbody"><tr><td colspan="7" class="empty">لا يوجد موظفون</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Devices ══ -->
+<div id="pg-devices" class="page">
+  <div class="ph"><h1>أجهزة البصمة DS-K</h1><p>ربط الأجهزة بالكاميرات (6 أجهزة)</p></div>
+  <div class="card">
+    <h3>➕ إضافة / تعديل جهاز</h3>
+    <input type="hidden" id="dev-id">
+    <div class="grid3">
+      <div class="fg"><label>اسم الجهاز</label><input id="dev-name" placeholder="جهاز_1"></div>
+      <div class="fg"><label>IP الجهاز</label><input id="dev-ip" placeholder="192.168.1.50"></div>
+      <div class="fg"><label>Port</label><input id="dev-port" value="80" type="number"></div>
+      <div class="fg"><label>اسم المستخدم</label><input id="dev-user" value="admin"></div>
+      <div class="fg"><label>كلمة المرور</label><input id="dev-pass" type="password"></div>
+      <div class="fg full">
+        <label>الكاميرا المرتبطة 
+          <button class="btn btn-p btn-sm" onclick="loadNVRCameras()" style="margin-right:8px">📡 جلب الكاميرات من NVR</button>
+        </label>
+        <select id="dev-ch-sel" onchange="selectCamera(this.value)" style="margin-bottom:8px">
+          <option value="">— اضغط جلب الكاميرات أولاً —</option>
+        </select>
+        <input type="hidden" id="dev-ch">
+        <div id="dev-cam-previews"></div>
+      </div>
+      <div class="fg full"><label>الموقع / الوصف</label><input id="dev-loc" placeholder="مدخل المبنى الرئيسي"></div>
+    </div>
+    <div id="dev-alert" style="margin-top:12px"></div>
+    <div class="btns">
+      <button class="btn btn-g" onclick="saveDevice()">💾 حفظ</button>
+      <button class="btn btn-o" onclick="resetDevForm()">↩ إلغاء</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🖐 الأجهزة المُعدّة</h3>
+    <div id="dev-list"><div class="empty">لا توجد أجهزة</div></div>
+  </div>
+</div>
+
+<!-- ══ NVR ══ -->
+<div id="pg-nvr" class="page">
+  <div class="ph"><h1>إعداد NVR</h1><p>Hikvision DS-9632NI-I16</p></div>
+  <div class="card">
+    <h3>⚙️ بيانات الاتصال</h3>
+    <div id="nvr-alert" style="margin-bottom:12px"></div>
+    <div class="grid2">
+      <div class="fg"><label>IP / DDNS</label><input id="nvr-ip" placeholder="192.168.1.10 أو abc.myhikvision.com"></div>
+      <div class="fg"><label>Port</label><input id="nvr-port" value="80" type="number"></div>
+      <div class="fg"><label>اسم المستخدم</label><input id="nvr-user" value="admin"></div>
+      <div class="fg"><label>كلمة المرور</label><input id="nvr-pass" type="password"></div>
+    </div>
+    <div class="btns">
+      <button class="btn btn-p" onclick="saveNVR()">💾 حفظ</button>
+      <button class="btn btn-o" onclick="testNVR()">🔗 اختبار الاتصال</button>
+    </div>
+    <div id="nvr-test" style="margin-top:16px"></div>
+  </div>
+</div>
+
+</main>
+
+<!-- ══ Scan ══ -->
+<div id="pg-scan" class="page">
+  <div class="ph"><h1>🔎 مسح الشبكة</h1><p>البحث التلقائي عن أجهزة Hikvision على الشبكة</p></div>
+  <div class="card">
+    <h3>⚙️ إعدادات المسح</h3>
+    <div class="grid3">
+      <div class="fg"><label>نطاق الشبكة 1</label><input id="scan-sub1" value="192.168.0" placeholder="192.168.0"></div>
+      <div class="fg"><label>نطاق الشبكة 2</label><input id="scan-sub2" value="192.168.88" placeholder="192.168.88"></div>
+      <div class="fg"><label>نطاق الشبكة 3</label><input id="scan-sub3" placeholder="192.168.1 (اختياري)"></div>
+      <div class="fg"><label>اسم المستخدم</label><input id="scan-user" value="admin"></div>
+      <div class="fg"><label>كلمة المرور</label><input id="scan-pass" type="password" placeholder="كلمة مرور الأجهزة"></div>
+    </div>
+    <div class="btns">
+      <button class="btn btn-p" id="scan-btn" onclick="startScan()">🔎 بدء المسح</button>
+    </div>
+    <div id="scan-progress" style="display:none;margin-top:14px">
+      <div id="scan-msg" style="font-size:13px;color:var(--muted);margin-bottom:6px">جاري المسح...</div>
+      <div class="pbw"><div class="pb" id="scan-pb" style="width:0%"></div></div>
+    </div>
+  </div>
+  <div id="scan-results"></div>
+</div>
+
+<!-- ══ Raw Logs ══ -->
+<div id="pg-rawlogs" class="page">
+  <div class="ph"><h1>سجلات الجهاز المباشرة</h1><p>كل البصمات من Face ID بدون فلترة</p></div>
+  <div class="card">
+    <div class="date-row">
+      <select id="rl-device"><option value="">— اختر الجهاز —</option></select>
+      <input type="date" id="rl-date">
+      <button class="btn btn-p" onclick="loadRawLogs()">📡 جلب السجلات</button>
+      <button class="btn btn-o btn-sm" onclick="loadRawLogs()">🔄</button>
+    </div>
+    <div id="rl-alert" style="margin-bottom:12px"></div>
+    <div id="rl-stats" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
+    <div class="tw">
+      <table>
+        <thead><tr>
+          <th>#</th><th>رقم البصمة</th><th>الوقت</th><th>التاريخ</th><th>الباب</th><th>اسم الموظف</th>
+        </tr></thead>
+        <tbody id="rl-tbody"><tr><td colspan="6" class="empty">اختر جهازاً واضغط جلب السجلات</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="closeOv(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="ov-title">صورة الكاميرا</h3>
+    <img id="ov-img" src="" alt="">
+    <div class="mi" id="ov-info"></div>
+    <div style="text-align:left">
+      <button class="btn btn-o" onclick="document.getElementById('overlay').classList.remove('open')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const today = () => new Date().toISOString().split('T')[0];
+
+// Init dates
+document.getElementById('quick-date').value = today();
+document.getElementById('chk-date').value   = today();
+document.getElementById('res-date').value   = today();
+document.getElementById('sch-date').value   = today();
+document.getElementById('bulk-date').value  = today();
+document.getElementById('dash-date').textContent = new Date().toLocaleDateString('ar-IQ', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+// ─── Navigation ───────────────────────────────────────────
+function go(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
+  document.getElementById('pg-'+name).classList.add('active');
+  event.currentTarget?.classList.add('active');
+  if (name==='dashboard')  { loadStats(); loadDashNofp(); }
+  if (name==='results')    loadResults();
+  if (name==='employees')  { loadEmployees(); loadDevicesSelect(); }
+  if (name==='devices')    loadDevices();
+  if (name==='nvr')        loadNVR();
+  if (name==='scan')       { }
+  if (name==='rawlogs')   { loadRawDevices(); document.getElementById('rl-date').value=today(); }
+}
+
+// ─── API ──────────────────────────────────────────────────
+async function api(url, opts={}) {
+  const r = await fetch(url, {headers:{'Content-Type':'application/json'}, ...opts});
+  return r.json();
+}
+
+// ─── Stats ────────────────────────────────────────────────
+async function loadStats(dt=null) {
+  dt = dt || document.getElementById('quick-date')?.value || today();
+  const s = await api(`/api/stats?date=${dt}`);
+  document.getElementById('s-tot').textContent  = s.total  || 0;
+  document.getElementById('s-ok').textContent   = s.ok     || 0;
+  document.getElementById('s-nofp').textContent = s.present_no_fp || 0;
+  document.getElementById('s-abs').textContent  = s.absent || 0;
+  document.getElementById('s-pend').textContent = s.pending|| 0;
+}
+
+async function loadDashNofp() {
+  const recs = await api(`/api/attendance?date=${today()}&status=present_no_fp`);
+  const el = document.getElementById('dash-nofp');
+  if (!recs.length) { el.innerHTML='<div class="empty">لا أحد جاء بدون بصمة اليوم ✅</div>'; return; }
+  el.innerHTML = `<div class="tw"><table>
+    <thead><tr><th>الموظف</th><th>الوردية</th><th>الوقت</th><th>صورة</th><th>ملاحظة AI</th></tr></thead>
+    <tbody>${recs.map(r=>`<tr>
+      <td><strong>${r.employee_name}</strong></td>
+      <td><span class="shift-pill sp-${r.shift_name}">${r.shift_name}</span></td>
+      <td>${r.expected_time||'—'}</td>
+      <td>${r.snapshot_b64?`<img class="thumb" src="data:image/jpeg;base64,${r.snapshot_b64}" onclick="openOv('${r.employee_name}','${r.shift_name}','${r.expected_time}','${r.status}','${r.ai_notes||''}','${r.snapshot_b64}')">`:'—'}</td>
+      <td style="font-size:12px;color:var(--muted)">${r.ai_notes||'—'}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+// ─── Quick check ──────────────────────────────────────────
+async function runCheck() {
+  const dt = document.getElementById('quick-date').value;
+  const sh = document.getElementById('quick-shift').value;
+  const el = document.getElementById('check-result');
+  const pg = document.getElementById('check-progress');
+  const pb = document.getElementById('check-pb');
+  const ms = document.getElementById('check-msg');
+
+  pg.style.display='block'; pb.style.width='30%';
+  ms.textContent='جاري الاتصال بأجهزة البصمة...';
+  el.innerHTML='';
+
+  const r = await api('/api/check', {method:'POST', body: JSON.stringify({date:dt, shift:sh})});
+  pb.style.width='100%';
+  ms.textContent='✅ بدأ الفحص في الخلفية — ستظهر النتائج خلال لحظات';
+  el.innerHTML='<div class="al i">يعمل النظام الآن على فحص الموظفين وسحب الصور. اضغط تحديث بعد دقيقة.</div>';
+  
+  setTimeout(() => { loadStats(dt); loadDashNofp(); pg.style.display='none'; }, 8000);
+}
+
+// ─── Check page ───────────────────────────────────────────
+async function startCheck() {
+  const dt = document.getElementById('chk-date').value;
+  const sh = document.getElementById('chk-shift').value;
+  const al = document.getElementById('chk-alert');
+  const pg = document.getElementById('chk-progress');
+  const pb = document.getElementById('chk-pb');
+  const ms = document.getElementById('chk-msg');
+
+  pg.style.display='block'; pb.style.width='0%';
+  
+  const steps = [
+    [20,'الاتصال بأجهزة البصمة DS-K...'],
+    [50,'جلب سجلات البصمة...'],
+    [70,'سحب الصور من NVR...'],
+    [90,'تحليل الصور بالذكاء الاصطناعي...'],
+  ];
+  for (const [w,t] of steps) {
+    ms.textContent=t; pb.style.width=w+'%';
+    await new Promise(r=>setTimeout(r,400));
+  }
+
+  const r = await api('/api/check', {method:'POST', body: JSON.stringify({date:dt, shift:sh})});
+  pb.style.width='100%';
+  ms.textContent='✅ الفحص يعمل في الخلفية';
+  al.innerHTML='<div class="al s">بدأ الفحص — اذهب إلى "النتائج والصور" بعد دقيقة لرؤية النتائج.</div>';
+  setTimeout(()=>al.innerHTML='', 6000);
+}
+
+// ─── Results ──────────────────────────────────────────────
+async function loadResults() {
+  const dt  = document.getElementById('res-date').value;
+  const sh  = document.getElementById('res-shift').value;
+  const st  = document.getElementById('res-status').value;
+  let url = `/api/attendance?date=${dt}`;
+  if(sh) url+=`&shift=${sh}`;
+  if(st) url+=`&status=${st}`;
+  const recs = await api(url);
+  const tb = document.getElementById('res-tbody');
+  if(!recs.length){tb.innerHTML='<tr><td colspan="7" class="empty">لا توجد نتائج</td></tr>';return;}
+  tb.innerHTML = recs.map(r=>`<tr>
+    <td><strong>${r.employee_name}</strong><br><span style="font-size:11px;color:var(--muted)">${r.emp_no}</span></td>
+    <td><span class="shift-pill sp-${r.shift_name}">${r.shift_name}</span></td>
+    <td style="font-weight:700">${r.expected_time||'—'}</td>
+    <td>${badge(r.status)}</td>
+    <td>${r.snapshot_b64
+      ?`<img class="thumb" src="data:image/jpeg;base64,${r.snapshot_b64}" onclick="openOv('${r.employee_name}','${r.shift_name}','${r.expected_time}','${r.status}','${(r.ai_notes||'').replace(/'/g,'')}','${r.snapshot_b64}')">`
+      :'<span style="color:var(--muted);font-size:12px">—</span>'}</td>
+    <td style="font-size:12px;color:var(--muted);max-width:180px">${r.ai_notes||'—'}</td>
+    <td><button class="btn btn-y btn-sm" onclick="recheck(${r.id},this)">🔄</button></td>
+  </tr>`).join('');
+}
+
+function badge(s){
+  const m={ok:['✅','بصّم'],present_no_fp:['📸','جاء بلا بصمة'],absent:['❌','غائب'],pending:['⏳','معلّق'],no_snapshot:['⚠️','لا صورة']};
+  const [i,l]=m[s]||['•',s];
+  return `<span class="badge ${s}">${i} ${l}</span>`;
+}
+
+async function recheck(id, btn) {
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  const r = await api(`/api/attendance/${id}/recheck`,{method:'POST'});
+  if(r.ok) loadResults();
+  else { btn.disabled=false; btn.innerHTML='🔄'; }
+}
+
+// ─── Schedule ─────────────────────────────────────────────
+async function loadSchedule() {
+  const dt = document.getElementById('sch-date').value;
+  const [schData, emps] = await Promise.all([
+    api(`/api/schedule?date=${dt}`),
+    api('/api/employees')
+  ]);
+  const rotating = emps.filter(e=>e.emp_type==='rotating');
+  const map = {};
+  schData.forEach(s=>map[s.employee_id]=s.shift_name);
+
+  const el = document.getElementById('sch-list');
+  if(!rotating.length){el.innerHTML='<div class="empty">لا يوجد موظفون مناوبون. أضفهم من صفحة الموظفين.</div>';return;}
+
+  el.innerHTML = rotating.map(emp=>`
+    <div class="sch-emp">
+      <div><div class="info">${emp.name}</div><div class="sub">${emp.emp_no} — ${emp.device_name||'—'}</div></div>
+      <div class="sch-shifts">
+        ${['صباحية','ظهيرة','مسائية','ليلية'].map(sh=>`
+          <span class="shift-pill sp-${sh} ${map[emp.id]===sh?'active':''}" 
+            onclick="assignShift(${emp.id},'${sh}','${dt}',this)"
+            style="${map[emp.id]===sh?'outline:2px solid currentColor;outline-offset:2px':'opacity:.5'}">${sh}</span>
+        `).join('')}
+        ${map[emp.id]?`<span style="font-size:11px;color:var(--muted);padding:0 6px">✓ ${map[emp.id]}</span>`:''}
+      </div>
+    </div>`).join('');
+}
+
+async function assignShift(eid, shift, dt, el) {
+  await api('/api/schedule',{method:'POST',body:JSON.stringify({employee_id:eid,work_date:dt,shift_name:shift})});
+  loadSchedule();
+}
+
+async function loadBulkEmps() {
+  const emps = await api('/api/employees');
+  const rotating = emps.filter(e=>e.emp_type==='rotating');
+  document.getElementById('bulk-emps').innerHTML = rotating.map(e=>`
+    <label style="display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer">
+      <input type="checkbox" value="${e.id}" style="width:auto">
+      <span>${e.name} — <span style="color:var(--muted);font-size:12px">${e.emp_no}</span></span>
+    </label>`).join('');
+}
+
+async function bulkAssign() {
+  const ids = [...document.querySelectorAll('#bulk-emps input:checked')].map(i=>+i.value);
+  if(!ids.length){document.getElementById('bulk-alert').innerHTML='<div class="al w">اختر موظفاً على الأقل</div>';return;}
+  const dt = document.getElementById('bulk-date').value;
+  const sh = document.getElementById('bulk-shift').value;
+  await api('/api/schedule/bulk',{method:'POST',body:JSON.stringify({employee_ids:ids,work_date:dt,shift_name:sh})});
+  document.getElementById('bulk-alert').innerHTML=`<div class="al s">✅ تم تعيين وردية "${sh}" لـ ${ids.length} موظف</div>`;
+  setTimeout(()=>document.getElementById('bulk-alert').innerHTML='',3000);
+  loadSchedule();
+}
+
+// ─── Employees ────────────────────────────────────────────
+async function loadEmployees() {
+  const emps = await api('/api/employees');
+  const tb = document.getElementById('emp-tbody');
+  if(!emps.length){tb.innerHTML='<tr><td colspan="7" class="empty">لا يوجد موظفون</td></tr>';return;}
+  tb.innerHTML=emps.map(e=>`<tr>
+    <td><strong>${e.name}</strong></td>
+    <td>${e.emp_no}</td>
+    <td style="font-family:monospace;font-size:13px">${e.fingerprint_no}</td>
+    <td><span class="badge ${e.emp_type==='regular'?'ok':'pending'}">${e.emp_type==='regular'?'عادي':'مناوب'}</span></td>
+    <td>${e.device_name||'—'}</td>
+    <td>${e.emp_type==='regular'?e.regular_end:'—'}</td>
+    <td>
+      <button class="btn btn-o btn-sm" onclick="editEmp(${JSON.stringify(e).replace(/"/g,'&quot;')})">✏️</button>
+      <button class="btn btn-r btn-sm" onclick="delEmp(${e.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+
+async function loadDevicesSelect() {
+  const devs = await api('/api/devices');
+  const sel = document.getElementById('emp-dev');
+  sel.innerHTML='<option value="">— اختر الجهاز —</option>'+devs.map(d=>`<option value="${d.id}">${d.name} — ${d.location||d.ip}</option>`).join('');
+}
+
+function toggleEmpType() {
+  const t = document.getElementById('emp-type').value;
+  document.getElementById('emp-end-wrap').style.display = t==='regular'?'flex':'none';
+}
+
+function editEmp(e) {
+  document.getElementById('emp-id').value=e.id;
+  document.getElementById('emp-name').value=e.name;
+  document.getElementById('emp-no').value=e.emp_no;
+  document.getElementById('emp-fp').value=e.fingerprint_no;
+  document.getElementById('emp-type').value=e.emp_type;
+  document.getElementById('emp-dev').value=e.device_id||'';
+  document.getElementById('emp-end').value=e.regular_end||'13:45';
+  toggleEmpType();
+  document.getElementById('pg-employees').scrollTop=0;
+}
+
+async function saveEmployee() {
+  const d = {
+    id: document.getElementById('emp-id').value||null,
+    name: document.getElementById('emp-name').value,
+    emp_no: document.getElementById('emp-no').value,
+    fingerprint_no: document.getElementById('emp-fp').value,
+    emp_type: document.getElementById('emp-type').value,
+    device_id: document.getElementById('emp-dev').value||null,
+    regular_start:'07:00',
+    regular_end: document.getElementById('emp-end').value,
+  };
+  if(!d.name||!d.fingerprint_no){document.getElementById('emp-alert').innerHTML='<div class="al e">الاسم ورقم البصمة مطلوبان</div>';return;}
+  const r = await api('/api/employees',{method:'POST',body:JSON.stringify(d)});
+  document.getElementById('emp-alert').innerHTML=r.ok?'<div class="al s">✅ تم الحفظ</div>':'<div class="al e">❌ خطأ</div>';
+  resetEmpForm(); loadEmployees();
+  setTimeout(()=>document.getElementById('emp-alert').innerHTML='',3000);
+}
+
+async function delEmp(id){
+  if(!confirm('حذف الموظف؟'))return;
+  await api(`/api/employees/${id}`,{method:'DELETE'});
+  loadEmployees();
+}
+
+function resetEmpForm(){
+  ['emp-id','emp-name','emp-no','emp-fp'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('emp-type').value='regular';
+  document.getElementById('emp-dev').value='';
+  toggleEmpType();
+}
+
+// ─── Network Scan ─────────────────────────────────────────
+async function startScan(){
+  const btn  = document.getElementById('scan-btn');
+  const pg   = document.getElementById('scan-progress');
+  const pb   = document.getElementById('scan-pb');
+  const msg  = document.getElementById('scan-msg');
+  const res  = document.getElementById('scan-results');
+  
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> جاري المسح...';
+  pg.style.display = 'block'; res.innerHTML = '';
+  
+  const subnets = [
+    document.getElementById('scan-sub1').value,
+    document.getElementById('scan-sub2').value,
+    document.getElementById('scan-sub3').value,
+  ].filter(s => s.trim());
+
+  // محاكاة progress
+  let pct = 0;
+  const interval = setInterval(() => {
+    pct = Math.min(pct + 2, 90);
+    pb.style.width = pct + '%';
+    msg.textContent = `جاري فحص ${subnets.join(', ')} — ${pct}%`;
+  }, 500);
+
+  const r = await api('/api/scan', {
+    method: 'POST',
+    body: JSON.stringify({
+      subnets,
+      username: document.getElementById('scan-user').value,
+      password: document.getElementById('scan-pass').value,
+    })
+  }).catch(e => ({ok: false, error: e.message}));
+
+  clearInterval(interval);
+  pb.style.width = '100%';
+  btn.disabled = false; btn.innerHTML = '🔎 بدء المسح';
+
+  if (!r.ok) {
+    res.innerHTML = `<div class="al e">❌ ${r.error}</div>`; return;
+  }
+
+  const devs = r.devices || [];
+  msg.textContent = `✅ انتهى المسح — وُجد ${devs.length} جهاز`;
+
+  if (!devs.length) {
+    res.innerHTML = '<div class="card"><div class="empty">لم يُعثر على أجهزة Hikvision على الشبكة</div></div>';
+    return;
+  }
+
+  const cameras = devs.filter(d => d.type === 'camera' || d.type === 'nvr');
+  const faceids = devs.filter(d => d.type === 'faceid');
+  const others  = devs.filter(d => d.type === 'other');
+
+  res.innerHTML = `
+    ${faceids.length ? `
+    <div class="card">
+      <h3>🖐 أجهزة Face ID (${faceids.length})</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px">
+        ${faceids.map(d=>`
+          <div style="background:var(--surf);border-radius:8px;padding:14px;border:1px solid var(--border)">
+            <div style="font-weight:700;margin-bottom:4px">🖐 ${d.ip}</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Face ID 2</div>
+            <button class="btn btn-g btn-sm" onclick="addFaceIDDevice('${d.ip}')">➕ إضافة للنظام</button>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    ${cameras.length ? `
+    <div class="card">
+      <h3>📹 كاميرات / NVR (${cameras.length})</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+        ${cameras.map(d=>`
+          <div style="background:var(--surf);border-radius:8px;overflow:hidden;border:1px solid var(--border)">
+            ${d.preview ? `<img src="data:image/jpeg;base64,${d.preview}" style="width:100%;height:100px;object-fit:cover">` : '<div style="height:100px;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--muted)">📷</div>'}
+            <div style="padding:10px">
+              <div style="font-weight:700;font-size:13px">${d.ip}</div>
+              <div style="font-size:11px;color:var(--muted)">${d.type === 'nvr' ? 'NVR' : 'كاميرا'}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+  `;
+}
+
+async function addFaceIDDevice(ip){
+  const name = prompt(`اسم الجهاز (${ip}):`, `جهاز_${ip.split('.').pop()}`);
+  if(!name) return;
+  const pass = prompt('كلمة مرور الجهاز:');
+  if(pass === null) return;
+  
+  // فتح صفحة الأجهزة وتعبئة البيانات
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pg-devices').classList.add('active');
+  
+  document.getElementById('dev-name').value = name;
+  document.getElementById('dev-ip').value   = ip;
+  document.getElementById('dev-port').value = 80;
+  document.getElementById('dev-user').value = 'admin';
+  document.getElementById('dev-pass').value = pass;
+  
+  alert('✅ تم تعبئة البيانات — اختر الكاميرا المرتبطة واضغط حفظ');
+}
+
+// ─── NVR Cameras Discovery ────────────────────────────────
+async function loadNVRCameras(){
+  const sel = document.getElementById('dev-ch-sel');
+  const prev = document.getElementById('dev-cam-previews');
+  sel.innerHTML = '<option>⏳ جاري جلب الكاميرات من NVR...</option>';
+  if(prev) prev.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:10px">جاري التحميل...</div>';
+  
+  const r = await api('/api/nvr/cameras', {method:'POST', body:JSON.stringify({})});
+  
+  if(!r.ok || !r.cameras || !r.cameras.length){
+    sel.innerHTML = '<option value="">❌ لم تُجلب كاميرات — تأكد من إعداد NVR</option>';
+    if(prev) prev.innerHTML = '';
+    return;
+  }
+  
+  sel.innerHTML = '<option value="">— اختر الكاميرا —</option>' +
+    r.cameras.map(c=>`<option value="${c.channel}">📹 Camera ${String(c.channel).padStart(2,'0')} — Channel ${c.channel}</option>`).join('');
+  
+  if(prev){
+    prev.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:12px">
+      ${r.cameras.map(c=>`
+        <div onclick="selectCamera(${c.channel})" id="cam-card-${c.channel}"
+          style="cursor:pointer;border:2px solid var(--border);border-radius:8px;overflow:hidden;transition:.15s"
+          onmouseover="this.style.borderColor='var(--accent)'" onmouseout="if(document.getElementById('dev-ch').value!='${c.channel}')this.style.borderColor='var(--border)'">
+          <img src="data:image/jpeg;base64,${c.preview}" style="width:100%;height:75px;object-fit:cover;display:block">
+          <div style="padding:5px 8px;font-size:11px;text-align:center;color:var(--muted)">Ch.${c.channel}</div>
+        </div>`).join('')}
+    </div>`;
+  }
+}
+
+function selectCamera(ch){
+  document.getElementById('dev-ch-sel').value = ch;
+  document.getElementById('dev-ch').value = ch;
+  document.querySelectorAll('[id^="cam-card-"]').forEach(x => x.style.borderColor='var(--border)');
+  const card = document.getElementById(`cam-card-${ch}`);
+  if(card) card.style.borderColor='var(--accent)';
+}
+
+// ─── Devices ──────────────────────────────────────────────
+async function loadDevices() {
+  const devs = await api('/api/devices');
+  const el = document.getElementById('dev-list');
+  if(!devs.length){el.innerHTML='<div class="empty">لا توجد أجهزة. أضف الأجهزة الستة.</div>';return;}
+  el.innerHTML = devs.map(d=>`
+    <div style="background:var(--surf);border-radius:8px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-weight:700;font-size:14px">🖐 ${d.name}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">${d.ip}:${d.port} — كاميرا Ch.${d.channel_no} — ${d.location||''}</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-o btn-sm" onclick="testDev(${d.id})">🔗 اختبار</button>
+        <button class="btn btn-o btn-sm" onclick="editDev(${JSON.stringify(d).replace(/"/g,'&quot;')})">✏️</button>
+        <button class="btn btn-r btn-sm" onclick="delDev(${d.id})">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function editDev(d){
+  document.getElementById('dev-id').value=d.id;
+  document.getElementById('dev-name').value=d.name;
+  document.getElementById('dev-ip').value=d.ip;
+  document.getElementById('dev-port').value=d.port;
+  document.getElementById('dev-user').value=d.username||'admin';
+  document.getElementById('dev-ch').value=d.channel_no;
+  document.getElementById('dev-ch-sel').value=d.channel_no;
+  document.getElementById('dev-loc').value=d.location||'';
+}
+
+async function saveDevice(){
+  const d={
+    id: document.getElementById('dev-id').value||null,
+    name: document.getElementById('dev-name').value,
+    ip: document.getElementById('dev-ip').value,
+    port: +document.getElementById('dev-port').value||80,
+    username: document.getElementById('dev-user').value,
+    password: document.getElementById('dev-pass').value,
+    channel_no: +document.getElementById('dev-ch').value,
+    location: document.getElementById('dev-loc').value,
+  };
+  if(!d.name||!d.ip){document.getElementById('dev-alert').innerHTML='<div class="al e">الاسم والـ IP مطلوبان</div>';return;}
+  const r=await api('/api/devices',{method:'POST',body:JSON.stringify(d)});
+  document.getElementById('dev-alert').innerHTML=r.ok?'<div class="al s">✅ تم الحفظ</div>':'<div class="al e">❌ خطأ</div>';
+  resetDevForm(); loadDevices();
+  setTimeout(()=>document.getElementById('dev-alert').innerHTML='',3000);
+}
+
+async function testDev(id){
+  const r=await api(`/api/devices/${id}/test`,{method:'POST'});
+  alert(r.ok ? r.message : `❌ ${r.error}`);
+}
+
+async function delDev(id){if(!confirm('حذف الجهاز؟'))return;await api(`/api/devices/${id}`,{method:'DELETE'});loadDevices();}
+function resetDevForm(){['dev-id','dev-name','dev-ip','dev-pass','dev-loc'].forEach(i=>document.getElementById(i).value='');document.getElementById('dev-port').value=80;document.getElementById('dev-user').value='admin';}
+
+// ─── NVR ──────────────────────────────────────────────────
+async function loadNVR(){
+  const r=await api('/api/nvr');
+  if(r.ip){document.getElementById('nvr-ip').value=r.ip;document.getElementById('nvr-port').value=r.port;document.getElementById('nvr-user').value=r.username;}
+}
+async function saveNVR(){
+  const d={ip:document.getElementById('nvr-ip').value,port:+document.getElementById('nvr-port').value||80,username:document.getElementById('nvr-user').value,password:document.getElementById('nvr-pass').value};
+  const r=await api('/api/nvr',{method:'POST',body:JSON.stringify(d)});
+  document.getElementById('nvr-alert').innerHTML=r.ok?'<div class="al s">✅ تم الحفظ</div>':'<div class="al e">❌ خطأ</div>';
+  setTimeout(()=>document.getElementById('nvr-alert').innerHTML='',3000);
+}
+async function testNVR(){
+  const d={ip:document.getElementById('nvr-ip').value,port:+document.getElementById('nvr-port').value||80,username:document.getElementById('nvr-user').value,password:document.getElementById('nvr-pass').value};
+  const el=document.getElementById('nvr-test');
+  el.innerHTML='<div class="al i">🔗 جاري الاتصال...</div>';
+  const r=await api('/api/nvr/test',{method:'POST',body:JSON.stringify(d)});
+  if(r.ok) el.innerHTML=`<div class="al s">✅ تم الاتصال!<br><img src="data:image/jpeg;base64,${r.snapshot}" style="max-width:320px;margin-top:10px;border-radius:8px"></div>`;
+  else el.innerHTML=`<div class="al e">❌ ${r.error}</div>`;
+}
+
+// ─── Modal ────────────────────────────────────────────────
+function openOv(name,shift,time,status,notes,b64){
+  document.getElementById('ov-title').textContent=`📸 ${name} — ${shift}`;
+  document.getElementById('ov-img').src=`data:image/jpeg;base64,${b64}`;
+  document.getElementById('ov-info').innerHTML=`
+    <div><span>الموظف</span><strong>${name}</strong></div>
+    <div><span>الوردية</span><strong>${shift}</strong></div>
+    <div><span>الوقت المتوقع</span><strong>${time}</strong></div>
+    <div><span>النتيجة</span><strong>${badge(status)}</strong></div>
+    ${notes?`<div style="grid-column:1/-1"><span>ملاحظة الذكاء الاصطناعي</span><strong>${notes}</strong></div>`:''}`;
+  document.getElementById('overlay').classList.add('open');
+}
+function closeOv(e){if(e.target.id==='overlay')document.getElementById('overlay').classList.remove('open');}
+
+// Raw Logs
+async function loadRawDevices() {
+  const devs = await api('/api/devices');
+  const sel = document.getElementById('rl-device');
+  sel.innerHTML = '<option value="">— اختر الجهاز —</option>' +
+    devs.map(d => `<option value="${d.id}">${d.name} — ${d.ip}</option>`).join('');
+}
+
+async function loadRawLogs() {
+  const did  = document.getElementById('rl-device').value;
+  const dt   = document.getElementById('rl-date').value;
+  const al   = document.getElementById('rl-alert');
+  const tb   = document.getElementById('rl-tbody');
+  const st   = document.getElementById('rl-stats');
+
+  if (!did) { al.innerHTML = '<div class="al w">اختر جهازاً أولاً</div>'; return; }
+
+  al.innerHTML = '<div class="al i">⏳ جاري الاتصال بالجهاز...</div>';
+  tb.innerHTML = '<tr><td colspan="6" class="empty">جاري التحميل...</td></tr>';
+  st.innerHTML = '';
+
+  const r = await api('/api/rawlogs', {
+    method: 'POST',
+    body: JSON.stringify({ device_id: did, date: dt || new Date().toISOString().split('T')[0] })
+  });
+
+  if (!r.ok) {
+    al.innerHTML = `<div class="al e">❌ ${r.error}</div>`; return;
+  }
+
+  const logs = r.logs || [];
+  const emps = r.employees || {};
+
+  al.innerHTML = '';
+  st.innerHTML = `
+    <div class="sc tot" style="padding:12px 16px;min-width:120px"><div class="lbl">إجمالي السجلات</div><div class="val" style="font-size:22px">${logs.length}</div></div>
+    <div class="sc ok"  style="padding:12px 16px;min-width:120px"><div class="lbl">موظفون مختلفون</div><div class="val" style="font-size:22px">${new Set(logs.map(l=>l.card_no)).size}</div></div>
+  `;
+
+  if (!logs.length) {
+    tb.innerHTML = '<tr><td colspan="6" class="empty">لا توجد سجلات لهذا اليوم</td></tr>'; return;
+  }
+
+  tb.innerHTML = logs.map((l, i) => `<tr>
+    <td style="color:var(--muted);font-size:12px">${i+1}</td>
+    <td><strong style="font-family:monospace">${l.card_no}</strong></td>
+    <td style="font-weight:700;color:var(--accent)">${l.time ? l.time.split('T')[1]?.substring(0,8) || l.time : '—'}</td>
+    <td style="font-size:12px;color:var(--muted)">${l.time ? l.time.split('T')[0] : '—'}</td>
+    <td style="font-size:12px">${l.door_no || 1}</td>
+    <td style="color:var(--green)">${emps[l.card_no] || '<span style="color:var(--muted)">غير معرّف</span>'}</td>
+  </tr>`).join('');
+}
+
+// Init
+loadStats(); loadDashNofp();
+</script>
+</body>
+</html>
