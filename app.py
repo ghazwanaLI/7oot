@@ -16,19 +16,14 @@ AGENT_URL     = os.getenv('AGENT_URL', '')        # رابط Agent على حاس
 AGENT_SECRET  = os.getenv('AGENT_SECRET', 'opdc-secret-2026')
 DATABASE_URL  = os.getenv('DATABASE_URL', '')
 
-# ─── قاعدة البيانات (SQLite محلي أو PostgreSQL) ───────────
+# ─── قاعدة البيانات ───────────────────────────────────────
 USE_PG = bool(DATABASE_URL)
 
 if USE_PG:
-    import urllib.parse as up
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
     def get_db():
-        import socket
-        result = up.urlparse(DATABASE_URL)
-        import ssl
-        conn = __import__('psycopg2').connect(
-            DATABASE_URL, sslmode='require',
-            cursor_factory=__import__('psycopg2.extras', fromlist=['RealDictCursor']).RealDictCursor
-        )
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
         return conn
     PH = '%s'
 else:
